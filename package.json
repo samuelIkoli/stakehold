@@ -1,0 +1,14 @@
+{
+  "name": "stakehold",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix app install && npm --prefix app run db:push",
+    "dev": "npm --prefix app run dev",
+    "build:program": "anchor build && npm run sync-idl",
+    "test:program": "anchor test",
+    "test:app": "npm --prefix app test",
+    "sync-idl": "cp target/idl/stakehold.json app/src/lib/solana/idl/stakehold.json && cp target/types/stakehold.ts app/src/lib/solana/idl/stakehold.ts",
+    "init:devnet": "npm --prefix app run init:devnet",
+    "seed:demo": "npm --prefix app run seed:demo"
+  }
+}

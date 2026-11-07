@@ -1,0 +1,1572 @@
+{
+  "address": "87upMZXfZad7wuReP9LeoKW3HpFGfhgyF5nEhVSZx5ec",
+  "metadata": {
+    "name": "stakehold",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Stakehold: survivor-style habit challenges with SOL stakes"
+  },
+  "instructions": [
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "challenge",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "participant",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  114,
+                  116,
+                  105,
+                  99,
+                  105,
+                  112,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_challenge",
+      "discriminator": [
+        170,
+        244,
+        47,
+        1,
+        1,
+        15,
+        173,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "args.id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CreateChallengeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "donate_to_pool",
+      "discriminator": [
+        219,
+        179,
+        202,
+        183,
+        26,
+        49,
+        206,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "donor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "eliminate_missed",
+      "discriminator": [
+        245,
+        191,
+        243,
+        16,
+        118,
+        76,
+        1,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "challenge",
+          "writable": true,
+          "relations": [
+            "participant"
+          ]
+        },
+        {
+          "name": "participant",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "day",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "forfeit",
+      "discriminator": [
+        80,
+        154,
+        237,
+        158,
+        244,
+        198,
+        154,
+        9
+      ],
+      "accounts": [
+        {
+          "name": "player",
+          "signer": true
+        },
+        {
+          "name": "challenge",
+          "writable": true
+        },
+        {
+          "name": "participant",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  114,
+                  116,
+                  105,
+                  99,
+                  105,
+                  112,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_config",
+      "discriminator": [
+        23,
+        235,
+        115,
+        232,
+        168,
+        96,
+        1,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ConfigArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "join_challenge",
+      "discriminator": [
+        41,
+        104,
+        214,
+        73,
+        32,
+        168,
+        76,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "challenge",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "participant",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  114,
+                  116,
+                  105,
+                  99,
+                  105,
+                  112,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "utc_offset_min",
+          "type": "i16"
+        }
+      ]
+    },
+    {
+      "name": "open_window",
+      "discriminator": [
+        51,
+        40,
+        53,
+        181,
+        170,
+        43,
+        128,
+        168
+      ],
+      "accounts": [
+        {
+          "name": "judge",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "challenge",
+          "relations": [
+            "participant"
+          ]
+        },
+        {
+          "name": "participant"
+        },
+        {
+          "name": "window",
+          "writable": true
+        },
+        {
+          "name": "prev_window",
+          "docs": [
+            "Earlier window the same day (e.g. the gym check-in), so the new pose can differ."
+          ],
+          "optional": true
+        },
+        {
+          "name": "slot_hashes",
+          "docs": [
+            "full sysvar is too large to deserialize."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "day",
+          "type": "u16"
+        },
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "record_checkin",
+      "discriminator": [
+        118,
+        204,
+        183,
+        163,
+        118,
+        202,
+        223,
+        127
+      ],
+      "accounts": [
+        {
+          "name": "judge",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "challenge",
+          "relations": [
+            "participant"
+          ]
+        },
+        {
+          "name": "participant",
+          "writable": true
+        },
+        {
+          "name": "checkin",
+          "writable": true
+        },
+        {
+          "name": "window",
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CheckInArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "settle",
+      "discriminator": [
+        175,
+        42,
+        185,
+        87,
+        144,
+        131,
+        102,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "challenge",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "charity",
+          "writable": true,
+          "optional": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_config",
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ConfigArgs"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Challenge",
+      "discriminator": [
+        119,
+        250,
+        161,
+        121,
+        119,
+        81,
+        22,
+        208
+      ]
+    },
+    {
+      "name": "CheckIn",
+      "discriminator": [
+        16,
+        127,
+        31,
+        218,
+        222,
+        207,
+        180,
+        33
+      ]
+    },
+    {
+      "name": "CommunityPool",
+      "discriminator": [
+        56,
+        185,
+        253,
+        148,
+        127,
+        79,
+        154,
+        126
+      ]
+    },
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "Participant",
+      "discriminator": [
+        32,
+        142,
+        108,
+        79,
+        247,
+        179,
+        54,
+        6
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    },
+    {
+      "name": "Window",
+      "discriminator": [
+        66,
+        77,
+        66,
+        242,
+        153,
+        13,
+        1,
+        69
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Only the admin can do this"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidMode",
+      "msg": "Invalid challenge mode"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidStake",
+      "msg": "Stake amount out of range"
+    },
+    {
+      "code": 6003,
+      "name": "StartInPast",
+      "msg": "Start time must be in the future"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidDayLength",
+      "msg": "Invalid day length"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidDays",
+      "msg": "Invalid number of days"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidGrace",
+      "msg": "Invalid grace period"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidMaxPlayers",
+      "msg": "Invalid max players"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidFailDestination",
+      "msg": "Invalid failure destination"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidCharity",
+      "msg": "Charity is not on the approved list"
+    },
+    {
+      "code": 6010,
+      "name": "ChallengeFull",
+      "msg": "Challenge is full"
+    },
+    {
+      "code": 6011,
+      "name": "AlreadyStarted",
+      "msg": "Challenge has already started for you"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidOffset",
+      "msg": "Invalid UTC offset"
+    },
+    {
+      "code": 6013,
+      "name": "SoloCreatorOnly",
+      "msg": "Solo challenges can only be joined by their creator"
+    },
+    {
+      "code": 6014,
+      "name": "AlreadySettled",
+      "msg": "Challenge is already settled"
+    },
+    {
+      "code": 6015,
+      "name": "NotSettled",
+      "msg": "Challenge is not settled yet"
+    },
+    {
+      "code": 6016,
+      "name": "NotActive",
+      "msg": "Participant is not active"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidDay",
+      "msg": "Day is out of range"
+    },
+    {
+      "code": 6018,
+      "name": "WrongDay",
+      "msg": "That day is not open right now"
+    },
+    {
+      "code": 6019,
+      "name": "TooLate",
+      "msg": "Too late to record this day"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidVerdict",
+      "msg": "Invalid verdict"
+    },
+    {
+      "code": 6021,
+      "name": "WindowMismatch",
+      "msg": "Window does not belong to this participant/day"
+    },
+    {
+      "code": 6022,
+      "name": "WindowExpired",
+      "msg": "Proof window has expired"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidWindowIndex",
+      "msg": "Invalid window index"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidAttempt",
+      "msg": "Invalid attempt number"
+    },
+    {
+      "code": 6025,
+      "name": "SlotHashesUnavailable",
+      "msg": "SlotHashes sysvar data is unavailable"
+    },
+    {
+      "code": 6026,
+      "name": "DayNotOver",
+      "msg": "Day has not ended yet"
+    },
+    {
+      "code": 6027,
+      "name": "DayWasPassed",
+      "msg": "Participant passed that day"
+    },
+    {
+      "code": 6028,
+      "name": "NotEnded",
+      "msg": "Challenge has not ended yet"
+    },
+    {
+      "code": 6029,
+      "name": "ParticipantsMismatch",
+      "msg": "All participants must be passed to settle"
+    },
+    {
+      "code": 6030,
+      "name": "DuplicateParticipant",
+      "msg": "Duplicate participant account"
+    },
+    {
+      "code": 6031,
+      "name": "NotSurvivor",
+      "msg": "Participant did not survive"
+    },
+    {
+      "code": 6032,
+      "name": "InvalidBonus",
+      "msg": "Invalid bonus settings"
+    },
+    {
+      "code": 6033,
+      "name": "Overflow",
+      "msg": "Math overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "Challenge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "judge",
+            "type": "pubkey"
+          },
+          {
+            "name": "mode",
+            "type": "u8"
+          },
+          {
+            "name": "demo",
+            "type": "bool"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "start_ts",
+            "docs": [
+              "Reference start. Real challenges: 00:00 UTC of the start date; each member starts",
+              "at their own local midnight (start_ts - utc_offset). Demo: everyone starts here."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "day_len",
+            "type": "i64"
+          },
+          {
+            "name": "num_days",
+            "type": "u16"
+          },
+          {
+            "name": "grace_secs",
+            "docs": [
+              "Time after a day ends during which the judge may still record that day."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "window_secs",
+            "type": "u32"
+          },
+          {
+            "name": "max_players",
+            "type": "u8"
+          },
+          {
+            "name": "player_count",
+            "type": "u8"
+          },
+          {
+            "name": "active_count",
+            "type": "u8"
+          },
+          {
+            "name": "survivor_count",
+            "type": "u8"
+          },
+          {
+            "name": "claimed_count",
+            "type": "u8"
+          },
+          {
+            "name": "config_hash",
+            "docs": [
+              "SHA-256 of the offchain proof plan (rules the AI judges against)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "fail_dest",
+            "type": "u8"
+          },
+          {
+            "name": "charity",
+            "type": "pubkey"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "last_end_ts",
+            "docs": [
+              "Latest end time across all members (members in different time zones end at different times)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pot_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "share_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "bonus_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "settled_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CheckIn",
+      "docs": [
+        "Permanent record of one judged proof (or a day-0 baseline)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "participant",
+            "type": "pubkey"
+          },
+          {
+            "name": "day",
+            "type": "u16"
+          },
+          {
+            "name": "attempt",
+            "type": "u8"
+          },
+          {
+            "name": "verdict",
+            "type": "u8"
+          },
+          {
+            "name": "reason_code",
+            "type": "u16"
+          },
+          {
+            "name": "proof_hash",
+            "docs": [
+              "SHA-256 of the proof bundle. Photos themselves never go onchain."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "metric_a",
+            "docs": [
+              "Proof-type specific numbers, e.g. Duolingo total XP / streak, gym minutes."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "metric_b",
+            "type": "u64"
+          },
+          {
+            "name": "window",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CheckInArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "day",
+            "type": "u16"
+          },
+          {
+            "name": "attempt",
+            "type": "u8"
+          },
+          {
+            "name": "verdict",
+            "type": "u8"
+          },
+          {
+            "name": "reason_code",
+            "type": "u16"
+          },
+          {
+            "name": "proof_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "metric_a",
+            "type": "u64"
+          },
+          {
+            "name": "metric_b",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CommunityPool",
+      "docs": [
+        "Program-owned community pool. Its lamports are the pool balance (minus rent)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_in",
+            "type": "u64"
+          },
+          {
+            "name": "total_out",
+            "type": "u64"
+          },
+          {
+            "name": "bonuses_paid",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "docs": [
+        "Global settings. The admin sets which key is the AI judge and which demo charity",
+        "wallets solo users may pick."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "judge",
+            "type": "pubkey"
+          },
+          {
+            "name": "charities",
+            "type": {
+              "array": [
+                "pubkey",
+                3
+              ]
+            }
+          },
+          {
+            "name": "bonus_bps",
+            "docs": [
+              "Bonus paid to each solo finisher, in basis points of the pool balance."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bonus_cap",
+            "docs": [
+              "Upper bound on a single solo bonus."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "challenge_count",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "judge",
+            "type": "pubkey"
+          },
+          {
+            "name": "charities",
+            "type": {
+              "array": [
+                "pubkey",
+                3
+              ]
+            }
+          },
+          {
+            "name": "bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "bonus_cap",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateChallengeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "mode",
+            "type": "u8"
+          },
+          {
+            "name": "demo",
+            "type": "bool"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "day_len",
+            "type": "i64"
+          },
+          {
+            "name": "num_days",
+            "type": "u16"
+          },
+          {
+            "name": "grace_secs",
+            "type": "i64"
+          },
+          {
+            "name": "window_secs",
+            "type": "u32"
+          },
+          {
+            "name": "max_players",
+            "type": "u8"
+          },
+          {
+            "name": "config_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "fail_dest",
+            "type": "u8"
+          },
+          {
+            "name": "charity_index",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Participant",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "player",
+            "type": "pubkey"
+          },
+          {
+            "name": "start_ts",
+            "docs": [
+              "This member's own day-1 start (their local midnight), Unix seconds."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "utc_offset_min",
+            "type": "i16"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "eliminated_day",
+            "type": "u16"
+          },
+          {
+            "name": "eliminated_reason",
+            "type": "u8"
+          },
+          {
+            "name": "passed_bitmap",
+            "docs": [
+              "Bit (d-1) is set once day d has a passing check-in."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "days_passed",
+            "type": "u16"
+          },
+          {
+            "name": "last_checkin_day",
+            "type": "u16"
+          },
+          {
+            "name": "checkins",
+            "type": "u16"
+          },
+          {
+            "name": "joined_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "docs": [
+        "Holds the stakes for one challenge. Program-owned so only this program can debit it."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Window",
+      "docs": [
+        "A proof window for one member on one day. The pose (and any random pages) are",
+        "derived from `slot_hash`, read from the SlotHashes sysvar when the window opened."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "participant",
+            "type": "pubkey"
+          },
+          {
+            "name": "day",
+            "type": "u16"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          },
+          {
+            "name": "slot_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "opened_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "pose",
+            "docs": [
+              "[fingers 1-5, direction 0-3, extra 0-3]"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

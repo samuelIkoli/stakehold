@@ -1,0 +1,27 @@
+# Decisions log
+
+Choices made while building, with the reason. Newest at the bottom of each section.
+
+## Toolchain
+- **Installed via Homebrew** (`rustup`, `solana` 4.4.1 / Agave, `anchor` 1.2.2). The official `curl | sh` installers were blocked by the sandbox policy; Homebrew bottles were the safe equivalent. `cargo-build-sbf` is not in the Homebrew `solana` formula, so it was installed from crates.io (`cargo install cargo-build-sbf`, v4.6.0).
+- **Anchor 1.2.2** (current stable). Its default template tests programs with **LiteSVM** (in-process SVM) instead of a TS + `solana-test-validator` suite. `anchor test` runs them. LiteSVM lets tests move the clock, which a challenge program with day boundaries needs.
+- **TS client: `@anchor-lang/core` 1.2.2**, the renamed successor of `@coral-xyz/anchor` (the spec says `@coral-xyz/anchor`; its last release, 0.32.1, predates the Anchor 1.x IDL). Same API.
+- **`@solana/web3.js` 1.x** (1.99), because the wallet adapter and the Anchor TS client both require v1.
+- The npm cache in `~/.npm` contains root-owned files (EACCES). Instead of `sudo`, the repo's `.npmrc` points npm at `~/.npm-cache-stakehold`.
+
+## Program design
+- **Global `Config` PDA** holds the admin, the **judge pubkey** and the approved demo charity list. Each challenge copies the judge at creation, so a creator cannot appoint themselves as judge.
+- **Judge powers:** the judge key can sign only `open_window` and `record_checkin`. Neither touches the vault or the pool. The judge pays rent for the records it creates and nothing else. All fund movement (`settle`, `claim`) depends only on recorded state.
+- **Vault = program-owned PDA account** (not a system account), so the program can debit it directly. The pot is tracked as `pot_lamports = players × stake`, independent of the vault's rent.
+- **Per-member start time.** `create_challenge.start_ts` is 00:00 UTC of the start date. Each member's own start is `start_ts − utc_offset`, i.e. their local midnight. The offset is captured at join (from the browser's IANA zone, so DST at the start date is correct). Demo challenges ignore offsets and share one start.
+  - Simplification: the offset is fixed for the whole challenge, so a DST change mid-challenge shifts that member's day boundary by 1 h. Offchain code uses the same onchain boundaries so the two never disagree.
+- **Days are 1-based**; day 0 holds the baseline record (e.g. Duolingo XP + streak). A `passed_bitmap` (u64) records passed days, so challenges can run up to 60 days.
+- **Grace period** (`grace_secs`) after each day lets the judge record that day's verdict late (needed for the Duolingo midnight snapshot). `eliminate_missed` only works after day end + grace.
+- **Failed attempts are recorded too** (one `CheckIn` PDA per participant/day/attempt). A fail does not eliminate by itself, which allows the one retake. Elimination comes only from a day ending without a pass, from `forfeit` (quitting), or at settle.
+- **Windows are per participant per day per index**, not per challenge. Members can be in different time zones, so their days don't line up. Each member also gets their own pose, so members can't share photos. Index 0 is the main or check-in window and index 1 the gym check-out window. When a previous window is passed in and the poses would match, the program derives the pose from different hash bytes, so a check-out never repeats the check-in pose.
+- **Pose = `[hash[0] % 5 + 1, hash[1] % 4, hash[2] % 4]`** of the most recent SlotHashes entry: 5 × 4 × 4 = 80 combinations. It is computed and stored onchain and recomputed in the browser's Verify panel.
+- **The window *time* is chosen offchain** (a random time within the creator's allowed hours, kept secret until it opens). The *pose* is chosen onchain when the window opens, so nobody, the server included, knows it in advance.
+- **`settle` takes every participant as remaining accounts** (it checks the count, ownership, challenge and no duplicates). It marks survivors, eliminates any remaining members who missed days, and moves rounding dust to the community pool. With `max_players = 16` this fits in one transaction.
+- **Solo bonus** is moved from the pool into the vault at settle time (pool balance minus rent, × `bonus_bps`, capped at `bonus_cap`). This means two winners can never both count the same pool balance.
+- **`donate_to_pool`** was added so the demo can seed the community pool.
+- **`forfeit`** was added so a player can quit visibly (the "one quits" demo beat).

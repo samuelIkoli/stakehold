@@ -1,0 +1,174 @@
+// Offchain data. Onchain accounts are the source of truth for money and verdicts;
+// this database stores the human-readable side (plans, reasons, photos' locations,
+// snapshots) and a mirror of status for fast pages. SQLite locally; switch the
+// provider to "postgresql" for a hosted deploy.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Challenge {
+  id             String   @id // challenge PDA
+  onchainId      String
+  creator        String
+  title          String
+  habit          String
+  description    String   @default("")
+  proofType      String // photo | gym | duolingo | honor
+  plan           String // JSON proof plan (hashed onchain as config_hash)
+  planHash       String
+  strength       String // strong | good | honor
+  mode           String // group | public | solo
+  stakeLamports  Float
+  demo           Boolean  @default(false)
+  refStartTs     Int // challenge.start_ts onchain
+  dayLen         Int
+  numDays        Int
+  graceSecs      Int
+  windowSecs     Int
+  windowStartHr  Int      @default(7)
+  windowEndHr    Int      @default(21)
+  maxPlayers     Int
+  failDest       String   @default("pool") // pool | charity
+  charity        String?
+  gymLat         Float?
+  gymLng         Float?
+  gymRadiusM     Int?
+  gymLabel       String?
+  minGapSecs     Int?
+  minXp          Int?
+  status         String   @default("active") // active | settled
+  createTx       String
+  settleTx       String?
+  lastSync       Int      @default(0)
+  createdAt      DateTime @default(now())
+  participants   Participant[]
+  windows        ProofWindow[]
+  proofs         Proof[]
+  events         Event[]
+}
+
+model Participant {
+  id               String    @id // participant PDA
+  challengeId      String
+  challenge        Challenge @relation(fields: [challengeId], references: [id])
+  wallet           String
+  name             String?
+  tz               String
+  utcOffsetMin     Int
+  startTs          Int
+  status           String    @default("active") // active | eliminated | survived | claimed
+  eliminatedDay    Int?
+  eliminatedReason String?
+  daysPassed       Int       @default(0)
+  passedBitmap     String    @default("0")
+  duolingoUsername String?
+  isBot            Boolean   @default(false)
+  botScript        String? // JSON: { "1": "pass", "2": "wrong_pose", ... , "quitDay": 1 }
+  joinTx           String
+  claimTx          String?
+  createdAt        DateTime  @default(now())
+  windows          ProofWindow[]
+  proofs           Proof[]
+  snapshots        DuoSnapshot[]
+
+  @@unique([challengeId, wallet])
+}
+
+model ProofWindow {
+  id            String      @id @default(cuid())
+  challengeId   String
+  challenge     Challenge   @relation(fields: [challengeId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  day           Int
+  index         Int
+  scheduledAt   Int
+  status        String      @default("scheduled") // scheduled | open | failed
+  pda           String?
+  slot          String?
+  slotHash      String?
+  pose          String? // JSON [fingers, direction, extra]
+  openedAt      Int?
+  expiresAt     Int?
+  tx            String?
+  error         String?
+
+  @@unique([participantId, day, index])
+}
+
+model Proof {
+  id            String      @id @default(cuid())
+  challengeId   String
+  challenge     Challenge   @relation(fields: [challengeId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  day           Int
+  attempt       Int
+  kind          String // photo | gym_in | gym_out | duolingo | baseline | honor | bot
+  files         String      @default("[]")
+  proofHash     String
+  verdict       String // pass | fail | baseline | pending
+  reason        String
+  reasonCode    Int         @default(0)
+  checks        String      @default("{}")
+  metricA       Float?
+  metricB       Float?
+  lat           Float?
+  lng           Float?
+  windowIndex   Int?
+  onchain       Boolean     @default(true)
+  checkinPda    String?
+  tx            String?
+  createdAt     DateTime    @default(now())
+}
+
+model DuoSnapshot {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  boundary      Int // 0 = baseline at start; d = end of day d
+  totalXp       Int
+  streak        Int
+  takenAt       Int
+  source        String // scheduled | manual
+}
+
+model DuoLink {
+  wallet     String   @id
+  username   String
+  userId     String?
+  code       String
+  verified   Boolean  @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  challengeId   String
+  challenge     Challenge @relation(fields: [challengeId], references: [id])
+  participantId String?
+  type          String
+  message       String
+  tx            String?
+  createdAt     DateTime  @default(now())
+}
+
+model NotifySignup {
+  id        String   @id @default(cuid())
+  page      String
+  contact   String
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  token     String   @id
+  wallet    String
+  expiresAt DateTime
+}
