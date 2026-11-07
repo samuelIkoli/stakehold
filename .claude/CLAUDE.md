@@ -1,6 +1,6 @@
 # Stakehold — notes for Claude
 
-Habit challenges with SOL stakes on Solana **devnet**. Players stake, prove the habit daily (photo + random pose, gym check-in/out + GPS, Duolingo data, or honor), get eliminated on a missed day, and survivors split the pot. The product spec is `SPEC.md`; decisions go in `DECISIONS.md`, milestone status in `PROGRESS.md`.
+Habit challenges with SOL stakes on Solana **devnet**. Players stake, prove the habit daily (photo + random pose, gym check-in/out + GPS, Duolingo data, or honor), get eliminated on a missed day, and survivors split the pot. The product spec is `docs/SPEC.md`; decisions go in `docs/DECISIONS.md`, milestone status in `docs/PROGRESS.md`.
 
 ## Layout
 - `programs/stakehold/` — Anchor 1.2.2 program (escrow vault, SlotHashes pose windows, verdicts, elimination, settle, claim). LiteSVM tests live in `programs/stakehold/tests/test_flow.rs`.

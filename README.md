@@ -158,6 +158,7 @@ app/                     Next.js app (App Router, TypeScript, Tailwind)
   src/lib/time.ts        day-boundary logic (+ unit tests)
   prisma/schema.prisma   offchain data
   scripts/               init-devnet, seed-demo
+docs/                    spec, plan, progress, decisions, demo script, submission text
 ```
 
 Built for the MLH Solana Hackathon, November 2026.
