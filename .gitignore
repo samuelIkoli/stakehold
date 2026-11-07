@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.local
+.env*.local
+keys/
+*.keypair.json
+# build
+node_modules/
+.next/
+target/
+.anchor/
+test-ledger/
+dist/
+.logs/
+# app data
+app/prisma/*.db
+app/prisma/*.db-journal
+app/uploads/
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
