@@ -22,3 +22,5 @@ next-env.d.ts
 
 app/prisma/*.db
 app/uploads/
+# claude code (personal)
+.claude/settings.local.json
