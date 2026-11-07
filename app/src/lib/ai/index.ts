@@ -6,7 +6,11 @@ export * from "./types";
 
 const provider: AiProvider = gemini;
 
+/** Local testing only: AI_MOCK=1 makes the photo judge pass everything (clearly labelled). */
+const MOCK = process.env.AI_MOCK === "1";
+
 export const aiConfigured = () => {
+  if (MOCK) return true;
   const k = process.env.GEMINI_API_KEY;
   return !!k && !k.startsWith("PASTE_");
 };
@@ -42,6 +46,14 @@ export type PhotoJudgeInput = {
 };
 
 export async function judgePhoto(input: PhotoJudgeInput): Promise<JudgeResult> {
+  if (MOCK)
+    return {
+      verdict: "pass",
+      reason: "[MOCK referee — local testing only] accepted without AI review.",
+      checks: { pose_correct: true, live_photo: true, rule_followed: true, location_plausible: true, injection_detected: false },
+      reasonCode: 0,
+      model: "mock",
+    };
   const model = await provider.model();
   const system = `You are the impartial AI referee of Stakehold, a habit challenge where people stake money. You check one photo proof.
 ${INJECTION_GUARD}

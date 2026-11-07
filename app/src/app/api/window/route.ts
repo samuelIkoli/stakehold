@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       const gymIn = await db.proof.findFirst({ where: { participantId: p.id, day, kind: "gym_in", verdict: "pass" }, orderBy: { createdAt: "desc" } });
       if (!gymIn) throw new HttpError(400, "Check in first");
       const ready = Math.floor(gymIn.createdAt.getTime() / 1000) + (ch.minGapSecs ?? 2700);
-      if (now < ready) throw new HttpError(400, `Check-out unlocks in ${Math.ceil((ready - now) / 60)} min`);
+      if (now < ready) throw new HttpError(400, `Check-out unlocks in ${ready - now < 120 ? `${ready - now} s` : `${Math.ceil((ready - now) / 60)} min`}`);
     }
     const w = await openWindowFor(ch, p, day, index);
     return Response.json({ ...w, pose: w.pose ? JSON.parse(w.pose) : null });
