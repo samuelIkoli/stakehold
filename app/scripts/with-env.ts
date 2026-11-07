@@ -13,4 +13,4 @@ if (!target) {
   process.exit(1);
 }
 process.argv.splice(2, 1);
-await import(pathToFileURL(path.resolve(target)).href);
+void import(pathToFileURL(path.resolve(target)).href);

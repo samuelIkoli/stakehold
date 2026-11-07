@@ -129,5 +129,5 @@ export function useChallenge(id: string) {
   return { data, error, reload: load };
 }
 
-export const passed = (p: ParticipantRow, day: number) => day >= 1 && (BigInt(p.passedBitmap) & (1n << BigInt(day - 1))) !== 0n;
+export const passed = (p: ParticipantRow, day: number) => day >= 1 && (BigInt(p.passedBitmap) & (BigInt(1) << BigInt(day - 1))) !== BigInt(0);
 export const dayOf = (p: { startTs: number }, dayLen: number, now: number) => (now < p.startTs ? 0 : Math.floor((now - p.startTs) / dayLen) + 1);

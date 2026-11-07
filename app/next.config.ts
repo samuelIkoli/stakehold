@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.ngrok-free.app", "*.trycloudflare.com", "192.168.*.*"],
   serverExternalPackages: ["@prisma/client"],
   turbopack: {
+    // @anchor-lang/core's browser bundle references fs for NodeWallet; never used client-side.
+    resolveAlias: { fs: { browser: "./src/lib/empty.ts" } },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

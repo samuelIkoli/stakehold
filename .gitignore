@@ -19,3 +19,6 @@ app/uploads/
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+
+app/prisma/*.db
+app/uploads/

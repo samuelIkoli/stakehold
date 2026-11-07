@@ -22,7 +22,7 @@ export const clockOf = (ch: Challenge, p: Participant): DayClock => ({
   numDays: ch.numDays,
 });
 
-export const passedDay = (p: Participant, day: number) => day >= 1 && (BigInt(p.passedBitmap) & (1n << BigInt(day - 1))) !== 0n;
+export const passedDay = (p: Participant, day: number) => day >= 1 && (BigInt(p.passedBitmap) & (BigInt(1) << BigInt(day - 1))) !== BigInt(0);
 
 export async function logEvent(challengeId: string, type: string, message: string, extra: { participantId?: string; tx?: string } = {}) {
   await db.event.create({ data: { challengeId, type, message, ...extra } });
@@ -207,7 +207,7 @@ async function recordVerdict(opts: {
     },
   });
   if (opts.verdict === "pass" && opts.onchain !== false && !passedDay(p, opts.day)) {
-    const bitmap = BigInt(p.passedBitmap) | (1n << BigInt(opts.day - 1));
+    const bitmap = BigInt(p.passedBitmap) | (BigInt(1) << BigInt(opts.day - 1));
     await db.participant.update({ where: { id: p.id }, data: { passedBitmap: bitmap.toString(), daysPassed: { increment: 1 } } });
   }
   if (opts.verdict !== "baseline" && opts.onchain !== false) {
