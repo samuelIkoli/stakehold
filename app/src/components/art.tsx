@@ -92,7 +92,7 @@ export function HeroArt({ className }: { className?: string }) {
       {/* pose card */}
       <g transform="translate(300 190) rotate(-5)">
         <rect width="104" height="92" rx="18" fill="var(--ink)" />
-        <text x="14" y="26" fontSize="10" fontWeight="700" fill="var(--gold)" fontFamily="var(--font-body)" letterSpacing="1.5">TODAY&apos;S POSE</text>
+        <text x="12" y="24" fontSize="9" fontWeight="700" fill="var(--flame)" fontFamily="var(--font-body)" letterSpacing="1">TODAY&apos;S POSE</text>
         <text x="14" y="62" fontSize="30" fontFamily="var(--font-body)">✋👈</text>
         <text x="14" y="80" fontSize="10" fill="var(--bg)" opacity="0.7" fontFamily="var(--font-body)">5 fingers · left</text>
       </g>

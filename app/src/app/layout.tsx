@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <Providers>
           <Nav />
-          <main className="pb-24 md:pb-12">{children}</main>
+          <main className="overflow-x-clip pb-24 md:pb-12">{children}</main>
           <footer className="mx-auto hidden max-w-6xl items-center justify-between px-4 py-8 text-xs text-muted md:flex">
             <span>Stakehold · MLH Solana Hackathon 2026 · Solana devnet only — no real money.</span>
             <span className="flex gap-4">

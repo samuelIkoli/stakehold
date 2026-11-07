@@ -7,7 +7,7 @@ const EXTRA_EMOJI = ["😁", "👍", "🙆", "✌️"];
 export function PoseCard({ pose, compact, className }: { pose: Pose; compact?: boolean; className?: string }) {
   return (
     <div className={cx("rounded-3xl bg-ink p-5 text-bg", className)}>
-      <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">Today&apos;s pose</div>
+      <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-flame">Today&apos;s pose</div>
       <div className={cx("mt-3 grid grid-cols-3 gap-2", compact && "gap-1.5")}>
         <Tile big={String(pose.fingers)} label={`finger${pose.fingers > 1 ? "s" : ""}`} compact={compact} />
         <Tile big={DIR_EMOJI[pose.direction]} label={`point ${DIRECTIONS[pose.direction].replace("at the ", "")}`} compact={compact} />

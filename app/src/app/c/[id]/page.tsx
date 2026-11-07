@@ -69,7 +69,7 @@ function ChallengeView({ data: d, reload, created }: { data: ChallengeData; relo
 
       {/* HEADER */}
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="flame">
               {PROOF_EMOJI[c.proofType]} {PROOF_LABEL[c.proofType]}
@@ -78,13 +78,13 @@ function ChallengeView({ data: d, reload, created }: { data: ChallengeData; relo
             <Badge>{c.mode === "group" ? "🔒 Private group" : c.mode === "public" ? "🌍 Public" : "🎯 Solo"}</Badge>
             {c.demo && <Badge tone="violet">DEMO · 1 day = {c.dayLen / 60} min</Badge>}
           </div>
-          <h1 className="font-display mt-3 text-4xl font-extrabold leading-tight md:text-5xl">{c.title}</h1>
+          <h1 className="font-display mt-3 break-words text-3xl font-extrabold leading-tight sm:text-4xl md:text-5xl">{c.title}</h1>
           <p className="mt-2 max-w-2xl text-muted">{c.description || c.habit}</p>
         </div>
         <PhaseBanner d={d} t={t} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
         <div className="space-y-6">
           {/* POT */}
           <Card className="grid grid-cols-2 gap-px overflow-hidden bg-line sm:grid-cols-4">
@@ -641,7 +641,7 @@ function WindowProof({ w, d }: { w: WindowRow; d: ChallengeData }) {
         <span className="rounded bg-gold/25 px-0.5">{w.slotHash.slice(4, 6)}</span>
         {w.slotHash.slice(6)}
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-1 font-mono">
+      <div className="mt-2 grid grid-cols-1 gap-1 font-mono sm:grid-cols-3">
         <span>
           0x{w.slotHash.slice(0, 2)} % 5 + 1 = <b className="text-ink">{derived.fingers}</b>
         </span>

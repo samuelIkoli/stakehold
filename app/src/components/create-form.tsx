@@ -494,7 +494,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
       <div className="lg:sticky lg:top-24 lg:self-start">
         <Card className="overflow-hidden">
           <div className="bg-ink p-5 text-bg">
-            <div className="text-xs font-bold uppercase tracking-[0.18em] text-gold">{solo ? "Bet on yourself" : "Your challenge"}</div>
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-flame">{solo ? "Bet on yourself" : "Your challenge"}</div>
             <div className="font-display mt-1 text-2xl font-extrabold">{p?.title || "Untitled challenge"}</div>
             <div className="mt-1 text-sm opacity-70">{habit || "Describe a habit to begin"}</div>
           </div>

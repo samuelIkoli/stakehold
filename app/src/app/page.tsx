@@ -158,7 +158,7 @@ export default async function Home() {
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-flame/30 blur-3xl" />
           <div className="relative grid gap-8 md:grid-cols-2">
             <div>
-              <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-gold">Verifiable by anyone</div>
+              <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-flame">Verifiable by anyone</div>
               <h2 className="font-display text-3xl font-extrabold">Everything that matters is on Solana.</h2>
               <p className="mt-3 opacity-70">Photos stay private — only their SHA-256 hash goes onchain. Everything else is public and checkable.</p>
             </div>
