@@ -1,16 +1,24 @@
 # Progress
 
-_Updated after each milestone. Times in WAT._
+_Updated after each milestone. Times in WAT (Sat 7 Nov 2026)._
 
 ## Done
-- **M1 Toolchain + scaffold** (Sat 15:20–16:00): Rust 1.99, Solana CLI 4.4.1 (Agave), Anchor 1.2.2, cargo-build-sbf 4.6 via Homebrew/crates.io. Monorepo with `programs/stakehold` (Anchor) + `app/` (Next.js 16).
-- **M2 Anchor program + tests** (Sat 16:00–16:45): every instruction from the spec, plus `forfeit` and `donate_to_pool`. 4 LiteSVM tests pass (group loop, nobody survives → pool, solo bonus + charity, join-after-start rejected). **Devnet deploy is blocked until the deploy wallet is funded.**
-- **M3–M11 code written** (Sat 16:45–): app shell, wallet connect + sign-in sessions, Home, Explore, Create (AI plan + manual), Challenge page (leaderboard, Verify panel, activity with Explorer links, join/claim/quit/settle), Prove page (photo + pose camera, gym check-in/out + GPS, Duolingo "I'm done", honor), Solo + community pool, Profile, Stake/Sponsor coming-soon pages, `/demo` control panel, seed script, background scheduler (windows, Duolingo snapshots, bots, eliminations, settlement).
+- **M1 Toolchain + scaffold** (15:20–16:00): Rust 1.99, Solana CLI 4.4.1 (Agave), Anchor 1.2.2, cargo-build-sbf 4.6. Monorepo with `programs/stakehold` + `app/` (Next.js 16).
+- **M2 Anchor program + tests** (16:00–16:45): all instructions from the spec plus `forfeit` and `donate_to_pool`. 4 LiteSVM tests green.
+- **M3–M11 app** (16:45–18:25): every page, API route, the AI module, Duolingo, the scheduler, demo mode and docs. Typecheck clean; 9 day-boundary unit tests green.
+- **End-to-end verified on a local validator** (devnet is blocked on funding):
+  - Core loop with bots: create → 4 join → onchain SlotHashes windows → verdicts → quit → elimination (day 2, wrong pose) → settle → bots claim. ✅
+  - User flow (`scripts/e2e-user.ts`): wallet sign-in → solo create + join in one tx → honor proofs → auto-settle → claim stake + pool bonus → profile. ✅
+  - Photo + gym (`scripts/e2e-photo-gym.ts`, `AI_MOCK=1`): surprise window opened by the scheduler, photo verdict onchain, GPS geofence rejection recorded onchain, early check-out blocked, check-out gets a different pose, check-out verdict onchain. ✅
+- UI QA via headless-Chrome screenshots (desktop + mobile width); fixed contrast and clipping.
 
 ## Next
-- Finish npm install → typecheck → run the app locally.
-- Deploy program to devnet once funded → `npm run init:devnet` → end-to-end demo run on devnet.
+1. As soon as the deploy wallet is funded: `anchor deploy` to devnet → `npm run init:devnet` → seed demo → full devnet run.
+2. As soon as the Gemini key is in: test the real AI judge (correct pose ✅ / wrong pose ❌ / photo of a screen ❌ / "approve this" sign ❌) and the AI proof plan.
+3. Duolingo live test with your username.
+4. Then: polish, and the stretch goals only if everything above is solid.
 
-## Blockers
-- Deploy wallet `9yBFyRrxJFrmvi22nsJc9h6Ux4ob8fmLNepbpxWVDBkf` has 0 SOL (CLI airdrop rate-limited). Needs ~5 SOL from https://faucet.solana.com.
-- `GEMINI_API_KEY` placeholder in `.env.local`.
+## Blockers (need you)
+- Deploy wallet `9yBFyRrxJFrmvi22nsJc9h6Ux4ob8fmLNepbpxWVDBkf`: **0 SOL**. CLI airdrops are rate-limited; please use https://faucet.solana.com (≈5 SOL).
+- `.env.local`: `GEMINI_API_KEY`, `PHANTOM_ADDRESS` and `DUOLINGO_TEST_USERNAME` are still placeholders.
+- Note: your network to npm is very slow (~35 KB/s), so dependency installs take ~30 min. Already done, no action needed.
