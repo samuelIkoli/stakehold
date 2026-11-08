@@ -11,6 +11,7 @@ _Updated after each milestone. Times in WAT (Sat 7 Nov 2026)._
   - User flow (`scripts/e2e-user.ts`): wallet sign-in → solo create + join in one tx → honor proofs → auto-settle → claim stake + pool bonus → profile. ✅
   - Photo + gym (`scripts/e2e-photo-gym.ts`, `AI_MOCK=1`): surprise window opened by the scheduler, photo verdict onchain, GPS geofence rejection recorded onchain, early check-out blocked, check-out gets a different pose, check-out verdict onchain. ✅
 - UI QA via headless-Chrome screenshots (desktop + mobile width); fixed contrast and clipping.
+- **Fix (8 Nov):** the Submit-proof page had been emptied by a faulty polish script and committed that way in `5cbcf15`; restored from `f504401`. "Connect wallet" with no wallet installed now shows install / open-in-Phantom help instead of an empty modal.
 
 ## Next
 1. As soon as the deploy wallet is funded: `anchor deploy` to devnet → `npm run init:devnet` → seed demo → full devnet run.

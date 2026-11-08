@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { AddressLink, Badge, Button, Card, PROOF_EMOJI, Stat, TxLink } from "@/components/ui";
 import { DuolingoLink } from "@/components/duolingo-link";
-import { useSession } from "@/components/providers";
+import { useConnectWallet, useSession } from "@/components/providers";
 
 type Profile = {
   wallet: string;
@@ -28,7 +27,7 @@ type Profile = {
 
 export default function ProfilePage() {
   const { publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
+  const connect = useConnectWallet();
   const { wallet, signIn, signingIn } = useSession();
   const [p, setP] = useState<Profile | null>(null);
 
@@ -45,7 +44,7 @@ export default function ProfilePage() {
         <div className="text-4xl">👤</div>
         <h1 className="font-display mt-2 text-2xl font-bold">Your profile</h1>
         <p className="mt-1 text-muted">Connect a wallet to see your challenges and linked accounts.</p>
-        <Button className="mt-4" onClick={() => setVisible(true)}>
+        <Button className="mt-4" onClick={connect}>
           Connect wallet
         </Button>
       </Center>

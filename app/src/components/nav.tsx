@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Logo } from "./art";
 import { cx } from "./ui";
-import { useSession, useTheme } from "./providers";
+import { useConnectWallet, useSession, useTheme } from "./providers";
 import { shortKey } from "@/lib/solana/constants";
 
 const LINKS = [
@@ -87,7 +86,7 @@ export function Nav() {
 
 export function WalletButton({ className }: { className?: string }) {
   const { publicKey, disconnect, connecting } = useWallet();
-  const { setVisible } = useWalletModal();
+  const connect = useConnectWallet();
   const { connection } = useConnection();
   const { wallet: session, signOut } = useSession();
   const [open, setOpen] = useState(false);
@@ -114,10 +113,7 @@ export function WalletButton({ className }: { className?: string }) {
 
   if (!publicKey)
     return (
-      <button
-        onClick={() => setVisible(true)}
-        className={cx("h-9 rounded-full bg-ink px-4 text-sm font-semibold text-bg transition hover:opacity-90", className)}
-      >
+      <button onClick={connect} className={cx("h-9 rounded-full bg-ink px-4 text-sm font-semibold text-bg transition hover:opacity-90", className)}>
         {connecting ? "Connecting…" : "Connect wallet"}
       </button>
     );

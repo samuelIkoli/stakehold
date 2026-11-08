@@ -4,13 +4,12 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useChallenge, passed, dayOf, type ChallengeData, type ParticipantRow, type WindowRow } from "@/lib/client/use-challenge";
 import { AddressLink, Alert, Badge, Button, Card, Countdown, PROOF_EMOJI, PROOF_LABEL, Spinner, StrengthBadge, TxLink, cx, useNow } from "@/components/ui";
 import { Flame } from "@/components/art";
 import { PoseCard } from "@/components/pose-card";
 import { DuolingoLink } from "@/components/duolingo-link";
-import { useSession } from "@/components/providers";
+import { useConnectWallet, useSession } from "@/components/providers";
 import { claimTx, forfeitTx, friendlyError, joinTx, settleTx } from "@/lib/client/tx";
 import { memberStart } from "@/lib/time";
 import { canonicalJson, sha256Hex } from "@/lib/canonical";
@@ -159,7 +158,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
   const c = d.challenge;
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
-  const { setVisible } = useWalletModal();
+  const connect = useConnectWallet();
   const { signIn } = useSession();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -182,7 +181,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
 
   const join = () =>
     act("join", async () => {
-      if (!wallet) return setVisible(true);
+      if (!wallet) return connect();
       await signIn();
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const offset = c.demo ? 0 : memberStart(c.refStartTs, tz).offsetMin;
@@ -194,7 +193,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
 
   const claim = () =>
     act("claim", async () => {
-      if (!wallet) return setVisible(true);
+      if (!wallet) return connect();
       await signIn().catch(() => null);
       const sig = await claimTx(connection, wallet, c.id);
       setOkTx(sig);

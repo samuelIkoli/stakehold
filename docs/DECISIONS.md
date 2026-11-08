@@ -25,3 +25,8 @@ Choices made while building, with the reason. Newest at the bottom of each secti
 - **Solo bonus** is moved from the pool into the vault at settle time (pool balance minus rent, × `bonus_bps`, capped at `bonus_cap`). This means two winners can never both count the same pool balance.
 - **`donate_to_pool`** was added so the demo can seed the community pool.
 - **`forfeit`** was added so a player can quit visibly (the "one quits" demo beat).
+
+## App
+- **Wallets are discovered through Wallet Standard only** (no per-wallet adapter packages, which keeps npm installs small). When no wallet is detected, "Connect wallet" opens our own help dialog instead of the wallet-adapter modal, which would otherwise be an empty screen with no actions. On desktop it links to the Phantom install page and offers a reload. On mobile it deep-links into Phantom's in-app browser (`phantom.app/ul/browse/…`). Every connect button goes through `useConnectWallet()`.
+- **`AI_MOCK=1`** makes the photo referee approve everything, with a clear label. It's only for localnet e2e scripts, never for demos.
+- **Localnet before devnet**: the full loop (bots, user flow, photo + gym) was verified on `solana-test-validator` while devnet funding was pending.

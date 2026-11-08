@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { WalletReadyState } from "@solana/wallet-adapter-base";
+import { NoWalletDialog } from "./no-wallet";
 import bs58 from "bs58";
 import { RPC_URL } from "@/lib/solana/constants";
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -83,6 +85,27 @@ function SessionProvider({ children }: { children: ReactNode }) {
   return <Session.Provider value={{ wallet: effective, signingIn, signIn, signOut }}>{children}</Session.Provider>;
 }
 
+// ---------------- connect (wallet picker, or install help when none is detected) ----------------
+const Connect = createContext<() => void>(() => {});
+export const useConnectWallet = () => useContext(Connect);
+
+function ConnectProvider({ children }: { children: ReactNode }) {
+  const { wallets } = useWallet();
+  const { setVisible } = useWalletModal();
+  const [noWallet, setNoWallet] = useState(false);
+  const connect = useCallback(() => {
+    if (wallets.some((w) => w.readyState === WalletReadyState.Installed)) setVisible(true);
+    else setNoWallet(true);
+  }, [wallets, setVisible]);
+  const close = useCallback(() => setNoWallet(false), []);
+  return (
+    <Connect.Provider value={connect}>
+      {children}
+      {noWallet && <NoWalletDialog onClose={close} />}
+    </Connect.Provider>
+  );
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   const wallets = useMemo(() => [], []); // Phantom & co. register via Wallet Standard
   return (
@@ -90,7 +113,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <ConnectionProvider endpoint={RPC_URL} config={{ commitment: "confirmed" }}>
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>
-            <SessionProvider>{children}</SessionProvider>
+            <ConnectProvider>
+              <SessionProvider>{children}</SessionProvider>
+            </ConnectProvider>
           </WalletModalProvider>
         </WalletProvider>
       </ConnectionProvider>

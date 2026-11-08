@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Alert, Badge, Button, Card, Field, Segmented, StrengthBadge, cx, inputCls } from "./ui";
-import { useSession } from "./providers";
+import { useConnectWallet, useSession } from "./providers";
 import { canonicalJson, sha256Hex, type ChallengeRules } from "@/lib/canonical";
 import { localDate, memberStart, nextDate, nextDemoMidnight, utcMidnightOf } from "@/lib/time";
 import { createChallengeTx, friendlyError } from "@/lib/client/tx";
@@ -32,7 +31,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
   const router = useRouter();
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
-  const { setVisible } = useWalletModal();
+  const connect = useConnectWallet();
   const { signIn } = useSession();
 
   const [habit, setHabit] = useState("");
@@ -122,7 +121,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
 
   async function create() {
     setError(null);
-    if (!wallet) return setVisible(true);
+    if (!wallet) return connect();
     if (!p) return setError("Add a proof plan first");
     if (!p.title.trim() || !p.rule.trim()) return setError("Give the challenge a title and a rule");
     if (!timing) return;
