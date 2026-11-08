@@ -4,8 +4,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadEnvConfig } from "@next/env";
 
-loadEnvConfig(path.resolve(process.cwd(), ".."));
+// loadEnvConfig caches its first result, so it can only be called once; the root file goes in directly.
 loadEnvConfig(process.cwd());
+try {
+  process.loadEnvFile(path.resolve(process.cwd(), "..", ".env.local"));
+} catch {}
 
 const target = process.argv[2];
 if (!target) {
