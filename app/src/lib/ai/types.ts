@@ -33,7 +33,7 @@ export type JudgeResult = {
   model: string;
 };
 
-export type ProofType = "photo" | "gym" | "duolingo" | "honor";
+export type ProofType = "photo" | "gym" | "duolingo" | "github" | "honor";
 export type Strength = "strong" | "good" | "honor";
 
 export type ProofPlan = {
@@ -47,6 +47,8 @@ export type ProofPlan = {
   windowMinutes: number;
   minXp?: number;
   minGapMinutes?: number;
+  /** GitHub: commits that must be pushed to public repos each day/round. */
+  minCommits?: number;
   /** Separate proofs needed per day (photo only), e.g. "eat yam twice a day" → 2. */
   perDay?: number;
   /** Number of days, when the creator said so ("today" → 1, "for 2 weeks" → 14). */

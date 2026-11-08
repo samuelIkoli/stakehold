@@ -82,9 +82,10 @@ export const PROOF_LABEL: Record<string, string> = {
   photo: "Photo + pose",
   gym: "Gym check-in/out",
   duolingo: "Duolingo XP",
+  github: "GitHub commits",
   honor: "Honor system",
 };
-export const PROOF_EMOJI: Record<string, string> = { photo: "📸", gym: "🏋️", duolingo: "🦉", honor: "🤝" };
+export const PROOF_EMOJI: Record<string, string> = { photo: "📸", gym: "🏋️", duolingo: "🦉", github: "🐙", honor: "🤝" };
 
 export function TxLink({ sig, label = "View on Explorer", className }: { sig?: string | null; label?: string; className?: string }) {
   if (!sig) return null;

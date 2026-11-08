@@ -142,6 +142,9 @@ pub fn handle_join_challenge(ctx: Context<JoinChallenge>, utc_offset_min: i16) -
         challenge.start_ts - utc_offset_min as i64 * 60
     };
     require!(now < start_ts, ErrorCode::AlreadyStarted);
+    // Joining also closes at the challenge's official start, so a self-reported time zone
+    // can't be used to join after other players have begun.
+    require!(now < challenge.start_ts, ErrorCode::AlreadyStarted);
 
     let cpi = anchor_lang::system_program::Transfer {
         from: ctx.accounts.player.to_account_info(),

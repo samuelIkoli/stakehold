@@ -60,7 +60,11 @@ pub fn handle_settle(ctx: Context<Settle>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let challenge = &mut ctx.accounts.challenge;
     require!(challenge.status == CHALLENGE_ACTIVE, ErrorCode::AlreadySettled);
-    require!(now >= challenge.last_end_ts + challenge.grace_secs, ErrorCode::NotEnded);
+    let ended = now >= challenge.last_end_ts + challenge.grace_secs;
+    // Early settlement: once joining has closed, the outcome is decided as soon as at most
+    // one player is left (group/public) or the solo player is out.
+    let decided = if challenge.mode == MODE_SOLO { challenge.active_count == 0 } else { challenge.active_count <= 1 };
+    require!(ended || (now >= challenge.start_ts && decided), ErrorCode::NotEnded);
     require!(
         ctx.remaining_accounts.len() == challenge.player_count as usize,
         ErrorCode::ParticipantsMismatch
@@ -78,7 +82,14 @@ pub fn handle_settle(ctx: Context<Settle>) -> Result<()> {
         let mut p = Participant::try_deserialize(&mut &data[..])?;
         require_keys_eq!(p.challenge, challenge_key, ErrorCode::ParticipantsMismatch);
         if p.status == PLAYER_ACTIVE {
-            match p.first_missed(challenge.num_days) {
+            // Settling early: only days that are already over (plus grace) can count as missed.
+            let checked = if ended {
+                challenge.num_days
+            } else {
+                let over = (now - challenge.grace_secs - p.start_ts).max(0) / challenge.day_len;
+                over.min(challenge.num_days as i64) as u16
+            };
+            match p.first_missed(checked) {
                 None => {
                     p.status = PLAYER_SURVIVED;
                     survivors += 1;

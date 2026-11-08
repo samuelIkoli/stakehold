@@ -68,6 +68,7 @@ model Participant {
   daysPassed       Int       @default(0)
   passedBitmap     String    @default("0")
   duolingoUsername String?
+  githubUsername   String?
   isBot            Boolean   @default(false)
   botScript        String? // JSON: { "1": "pass", "2": "wrong_pose", ... , "quitDay": 1 }
   joinTx           String

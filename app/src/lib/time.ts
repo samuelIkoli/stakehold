@@ -80,6 +80,11 @@ export function memberStart(refStart: number, timeZone: string): { startTs: numb
 }
 
 /** Next "demo midnight": the next multiple of dayLen at least `leadSecs` from now. */
+/** Quick rounds start exactly the chosen lead time after creation — never later. */
+export function quickStart(now: number, leadSecs: number): number {
+  return now + leadSecs;
+}
+
 export function nextDemoMidnight(now: number, dayLen: number, leadSecs: number): number {
   return Math.ceil((now + leadSecs) / dayLen) * dayLen;
 }

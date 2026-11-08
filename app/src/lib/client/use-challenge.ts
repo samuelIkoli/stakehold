@@ -35,6 +35,7 @@ export type ParticipantRow = {
   passedBitmap: string;
   duolingoUsername: string | null;
   duolingoVerified?: boolean;
+  githubUsername?: string | null;
   isBot: boolean;
   joinTx: string;
   claimTx: string | null;
@@ -63,7 +64,7 @@ export type ChallengeData = {
     title: string;
     habit: string;
     description: string;
-    proofType: "photo" | "gym" | "duolingo" | "honor";
+    proofType: "photo" | "gym" | "duolingo" | "github" | "honor";
     plan: Record<string, unknown> & { rule: string; windowStartHour: number; windowEndHour: number; windowMinutes: number };
     planHash: string;
     strength: string;

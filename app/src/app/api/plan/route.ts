@@ -19,6 +19,10 @@ function heuristicPlan(habit: string) {
   const common = { numDays, roundMinutes };
   if (/duolingo|language|spanish|french|learn .*(german|japanese|yoruba)/.test(h))
     return normalizePlan({ title: xp !== 30 ? `+${xp} XP on Duolingo` : "Duolingo every day", proofType: "duolingo", rule: `Earn at least ${xp} XP each day, counted from your starting XP.`, strengthReason: "XP is read from your public Duolingo profile; the account is linked by username (verification optional).", minXp: xp, ...common, tips: ["Make your profile public", "Do your lesson before midnight"] });
+  if (/github|commit|push code|ship code|open source|coding/.test(h)) {
+    const commits = Number(h.match(/(\d+)\s*commits?/)?.[1]) || 1;
+    return normalizePlan({ title: commits > 1 ? `${commits} commits a day` : "Commit every day", proofType: "github", rule: `Push at least ${commits} commit${commits > 1 ? "s" : ""} to public GitHub repos each day.`, strengthReason: "Counted from your public GitHub activity, timed by when GitHub received the push.", minCommits: commits, ...common, tips: ["Only public repos count", "Push before the day ends — GitHub's feed can lag a few minutes"] });
+  }
   if (/gym|workout|lift|weights/.test(h))
     return normalizePlan({ title: "Gym streak", proofType: "gym", rule: "Check in and check out at the gym, at least 45 minutes apart, showing the pose.", strengthReason: "Two live photos with random poses, GPS and a time gap.", minGapMinutes: 45, windowStartHour: 5, windowEndHour: 23, tips: ["Allow location access", "Check out after your workout"] });
   if (/^no |quit|stop|avoid|without/.test(h))

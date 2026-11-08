@@ -83,6 +83,7 @@ function ProofFlow({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; re
   const day = dayOf(me, c.dayLen, now);
   // Duolingo players can (and should) link their account before day 1 starts.
   if (c.proofType === "duolingo" && !me.duolingoUsername && day <= c.numDays) return <DuolingoProof d={d} me={me} reload={reload} />;
+  if (c.proofType === "github" && !me.githubUsername && day <= c.numDays) return <GithubProof d={d} me={me} reload={reload} />;
   if (day < 1) return <Alert className="mt-6">Day 1 starts in <Countdown to={me.startTs} />.</Alert>;
   if (day > c.numDays) return <Alert className="mt-6">The challenge has ended. Settlement is on its way.</Alert>;
   if (passed(me, day))
@@ -101,6 +102,7 @@ function ProofFlow({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; re
   if (c.proofType === "photo") return <PhotoProof d={d} me={me} day={day} reload={reload} />;
   if (c.proofType === "gym") return <GymProof d={d} me={me} day={day} reload={reload} />;
   if (c.proofType === "duolingo") return <DuolingoProof d={d} me={me} reload={reload} />;
+  if (c.proofType === "github") return <GithubProof d={d} me={me} reload={reload} />;
   return <HonorProof d={d} reload={reload} />;
 }
 
@@ -473,6 +475,94 @@ function Step({ n, label, active, done }: { n: number; label: string; active: bo
     <div className={cx("flex items-center gap-2 rounded-2xl border p-3 text-sm font-semibold", done ? "border-alive/40 bg-alive/10 text-alive" : active ? "border-flame/40 bg-flame/5" : "border-line text-muted")}>
       <span className={cx("grid h-6 w-6 place-items-center rounded-full text-xs", done ? "bg-alive text-white" : active ? "bg-flame text-white" : "bg-surface-2")}>{done ? "✓" : n}</span>
       {label}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ github
+
+function GithubProof({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; reload: () => Promise<void> }) {
+  const c = d.challenge;
+  const unit = c.demo ? "round" : "day";
+  const min = Number(c.plan.minCommits ?? 1);
+  const [user, setUser] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [r, setR] = useState<{ pass: boolean; message: string; tx?: string } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function post(url: string, body: unknown) {
+    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error);
+    return j;
+  }
+  async function link() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await post("/api/github/link", { challengeId: c.id, username: user.trim() });
+      await reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function check() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const j = await post("/api/proof/github", { challengeId: c.id });
+      setR(j);
+      if (j.pass) await reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!me.githubUsername)
+    return (
+      <Card className="mt-6 p-6">
+        <div className="text-4xl">🐙</div>
+        <div className="font-display mt-2 text-xl font-bold">Add your GitHub username</div>
+        <p className="mt-1 mb-4 text-sm text-muted">We count commits you push to public repos during each {unit}. Usernames aren&apos;t verified yet.</p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input className={inputCls} placeholder="GitHub username" value={user} onChange={(e) => setUser(e.target.value)} maxLength={39} />
+          <Button variant="secondary" onClick={link} loading={busy} disabled={!user.trim()}>
+            Save
+          </Button>
+        </div>
+        {err && <Alert tone="out" className="mt-3">{err}</Alert>}
+      </Card>
+    );
+
+  return (
+    <div className="mt-6 space-y-4">
+      <Card className="p-6 text-center">
+        <div className="text-5xl">🐙</div>
+        <p className="mt-3 text-muted">
+          Push <b className="text-ink">≥ {min} commit{min > 1 ? "s" : ""}</b> to public repos this {unit}, then tap below. We read{" "}
+          <b className="text-ink">@{me.githubUsername}</b>&apos;s public activity and count pushes by the time GitHub received them.
+        </p>
+        <Button size="lg" className="mt-5 w-full" onClick={check} loading={busy}>
+          I pushed — check GitHub
+        </Button>
+      </Card>
+      {r && (
+        <Card className={cx("rise p-6 text-center", r.pass ? "border-alive/40 bg-alive/10" : "border-out/30 bg-out/5")}>
+          <div className="font-display text-2xl font-extrabold">{r.pass ? "You're safe ✅" : "Not yet"}</div>
+          <p className="mt-2 text-sm">{r.message}</p>
+          {r.tx && (
+            <div className="mt-2">
+              <TxLink sig={r.tx} label="Verdict onchain" />
+            </div>
+          )}
+        </Card>
+      )}
+      {err && <Alert tone="out">{err}</Alert>}
+      <p className="text-center text-[11px] text-muted">GitHub&apos;s public feed can lag a few minutes; we keep re-checking during the grace period after the {unit} ends.</p>
     </div>
   );
 }

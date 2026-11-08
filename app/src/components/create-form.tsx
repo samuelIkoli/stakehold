@@ -6,7 +6,7 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Alert, Badge, Button, Card, Field, Segmented, StrengthBadge, cx, inputCls } from "./ui";
 import { useConnectWallet, useSession } from "./providers";
 import { canonicalJson, sha256Hex, type ChallengeRules } from "@/lib/canonical";
-import { localDate, memberStart, nextDate, nextDemoMidnight, utcMidnightOf } from "@/lib/time";
+import { localDate, memberStart, nextDate, quickStart, utcMidnightOf } from "@/lib/time";
 import { createChallengeTx, friendlyError } from "@/lib/client/tx";
 import { DuolingoLink } from "./duolingo-link";
 import { DEMO_CHARITIES, SOLO_BONUS_BPS, SOLO_BONUS_CAP_SOL } from "@/lib/charities";
@@ -54,6 +54,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
   const [charity, setCharity] = useState(0);
   const [description, setDescription] = useState("");
   const [duoOk, setDuoOk] = useState(false);
+  const [ghUser, setGhUser] = useState("");
   const [gym, setGym] = useState<{ lat: string; lng: string; radiusM: number; label: string }>({ lat: "", lng: "", radiusM: 100, label: "" });
   const [locating, setLocating] = useState(false);
 
@@ -119,7 +120,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
   const timing = useMemo(() => {
     const now = Math.floor(Date.now() / 1000);
     if (demo) {
-      const start = nextDemoMidnight(now, demoDayLen, demoLead);
+      const start = quickStart(now, demoLead);
       return { refStart: start, myStart: start, offset: 0 };
     }
     if (!startDate) return null;
@@ -153,7 +154,8 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
     const now = Math.floor(Date.now() / 1000);
     if (timing.myStart <= now + 30) return setError("Start time must be in the future — pick a later date");
     if (p.proofType === "gym" && (!gym.lat || !gym.lng)) return setError("Set the gym location");
-    if (p.proofType === "duolingo" && (mode === "solo" || playing) && !duoOk) return setError("Link and verify your Duolingo account first (step 3)");
+    if (p.proofType === "duolingo" && (mode === "solo" || playing) && !duoOk) return setError("Link your Duolingo account first (step 3)");
+    if (p.proofType === "github" && (mode === "solo" || playing) && !ghUser.trim()) return setError("Add your GitHub username (step 3)");
     setBusy(true);
     try {
       await signIn();
@@ -175,6 +177,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
         ...(p.proofType === "duolingo" ? { minXp: p.minXp ?? 30 } : {}),
         ...(minGapSecs ? { minGapSecs } : {}),
         ...(perDay > 1 ? { perDay } : {}),
+        ...(p.proofType === "github" ? { minCommits: p.minCommits ?? 1 } : {}),
         ...(p.proofType === "gym" ? { gym: { lat: Number(gym.lat), lng: Number(gym.lng), radiusM: gym.radiusM, label: gym.label || undefined } } : {}),
       };
       const hash = await sha256Hex(canonicalJson(rules));
@@ -205,7 +208,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
         const j = await fetch(`/api/challenges/${challenge}/join`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ tz, tx: sig }),
+          body: JSON.stringify({ tz, tx: sig, ...(p.proofType === "github" ? { github: ghUser.trim() } : {}) }),
         });
         if (!j.ok) console.warn("join registration:", (await j.json().catch(() => ({}))).error);
       }
@@ -283,6 +286,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
                   <option value="photo">📸 Photo + random pose</option>
                   <option value="gym">🏋️ Gym check-in + check-out + GPS</option>
                   <option value="duolingo">🦉 Duolingo XP (verified data)</option>
+                  <option value="github">🐙 GitHub commits (public activity)</option>
                   <option value="honor">🤝 Honor system (self-report)</option>
                 </select>
               </Field>
@@ -339,6 +343,11 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
                     </select>
                   </Field>
                 </>
+              )}
+              {p.proofType === "github" && (
+                <Field label={`Commits per ${demo ? "round" : "day"}`} hint="Pushed to public repos; timed by when GitHub received the push.">
+                  <input type="number" min={1} max={100} className={inputCls} value={p.minCommits ?? 1} onChange={(e) => set("minCommits", Math.max(1, Number(e.target.value) || 1))} />
+                </Field>
               )}
               {p.proofType === "duolingo" && (
                 <Field label="Minimum XP per day">
@@ -516,6 +525,13 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
                 <DuolingoLink onLinked={() => setDuoOk(true)} />
               </div>
             )}
+            {p.proofType === "github" && (solo || playing) && (
+              <div className="mt-5 rounded-2xl border border-line bg-surface-2/60 p-4">
+                <div className="mb-1 text-sm font-semibold">🐙 Your GitHub username</div>
+                <p className="mb-3 text-xs text-muted">We count commits you push to public repos. Not verified yet: it&apos;s shown as unverified to other players.</p>
+                <input className={inputCls} placeholder="e.g. octocat" value={ghUser} onChange={(e) => setGhUser(e.target.value)} maxLength={39} />
+              </div>
+            )}
             {!solo && (
               <label className="mt-5 flex items-center gap-3 text-sm">
                 <input type="checkbox" className="h-5 w-5 accent-[var(--flame)]" checked={playing} onChange={(e) => setPlaying(e.target.checked)} />
@@ -589,7 +605,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
             <Row k="Duration" v={demo ? `${days} × ${fmtLen(demoDayLen)} round${days > 1 ? "s" : ""}` : `${days} day${days > 1 ? "s" : ""}`} />
             {p?.proofType === "photo" && (p.perDay ?? 1) > 1 && <Row k="Photos" v={`${p.perDay} a ${demo ? "round" : "day"}, ≥ ${p.minGapMinutes ?? 60} min apart`} />}
             {!solo && <Row k="Max pot" v={`${(stake * maxPlayers).toFixed(2)} SOL`} />}
-            <Row k="Proof" v={p ? { photo: "📸 Photo + pose", gym: "🏋️ Gym", duolingo: "🦉 Duolingo", honor: "🤝 Honor" }[p.proofType] : "—"} />
+            <Row k="Proof" v={p ? { photo: "📸 Photo + pose", gym: "🏋️ Gym", duolingo: "🦉 Duolingo", github: "🐙 GitHub", honor: "🤝 Honor" }[p.proofType] : "—"} />
             <Row
               k="Starts"
               v={timing ? new Date(timing.myStart * 1000).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}

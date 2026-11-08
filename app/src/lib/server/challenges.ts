@@ -74,6 +74,7 @@ export async function registerJoin(input: {
   tx: string;
   name?: string;
   duolingoUsername?: string | null;
+  githubUsername?: string | null;
   isBot?: boolean;
   botScript?: string;
 }) {
@@ -92,6 +93,7 @@ export async function registerJoin(input: {
     joinTx: input.tx,
     name: input.name,
     duolingoUsername: input.duolingoUsername ?? null,
+    ...(input.githubUsername ? { githubUsername: input.githubUsername } : {}),
     isBot: !!input.isBot,
     botScript: input.botScript,
   };

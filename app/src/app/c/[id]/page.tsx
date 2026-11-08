@@ -56,7 +56,8 @@ function ChallengeView({ data: d, reload, created }: { data: ChallengeData; relo
   const t = useTiming(d, me);
   const alive = d.participants.filter((p) => p.status !== "eliminated").length;
   const pot = c.stakeLamports * d.participants.length;
-  const canJoin = t.phase === "lobby" && !me && d.participants.length < c.maxPlayers && !(c.mode === "solo");
+  // Joining closes at the official start (the program enforces this too).
+  const canJoin = t.phase === "lobby" && t.now < c.refStartTs && !me && d.participants.length < c.maxPlayers && !(c.mode === "solo");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
@@ -223,7 +224,9 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
 
   const myWindow = me ? d.windows.find((w) => w.participantId === me.id && w.day === t.rawDay && (w.expiresAt ?? 0) > t.now) : undefined;
   const todayPassed = me ? passed(me, t.rawDay) : false;
-  const settleReady = t.phase === "ended" && t.now >= t.lastEnd + c.graceSecs;
+  const stillIn = d.participants.filter((p) => p.status === "active").length;
+  const decided = t.now >= c.refStartTs && d.participants.length > 0 && (c.mode === "solo" ? stillIn === 0 : stillIn <= 1);
+  const settleReady = decided || (t.phase === "ended" && t.now >= t.lastEnd + c.graceSecs);
 
   return (
     <Card className="overflow-hidden">
@@ -235,7 +238,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
           <>
             <p className="text-sm text-muted">
               Stake <b className="text-ink">{c.stakeLamports / 1e9} SOL</b> to enter. Your day 1 starts at{" "}
-              {c.demo ? "the next demo midnight" : "midnight in your own time zone"}. Miss a day and you&apos;re out.
+              {c.demo ? "when the rounds start, together with everyone" : "midnight in your own time zone"}. Miss a {c.demo ? "round" : "day"} and you&apos;re out. Joining closes when the challenge starts.
             </p>
             {c.proofType === "duolingo" && (
               <div className="rounded-2xl border border-line p-4">
@@ -305,7 +308,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
               )
             ) : (
               <Button size="lg" className="w-full" href={`/c/${c.id}/prove`}>
-                {c.proofType === "gym" ? "🏋️ Check in / out" : c.proofType === "duolingo" ? "🦉 I'm done for today" : "🤝 Check in for today"}
+                {c.proofType === "gym" ? "🏋️ Check in / out" : c.proofType === "duolingo" ? "🦉 I'm done for today" : c.proofType === "github" ? "🐙 I pushed — check" : "🤝 Check in for today"}
               </Button>
             )}
             {!todayPassed && (
@@ -447,6 +450,11 @@ function Leaderboard({ d, t, meWallet }: { d: ChallengeData; t: ReturnType<typeo
                     <span className={cx("truncate font-semibold", out && "line-through decoration-out/60")}>{p.name || shortKey(p.wallet)}</span>
                     {p.wallet === meWallet && <Badge tone="flame">you</Badge>}
                     {p.isBot && <Badge tone="violet">scripted bot</Badge>}
+                    {c.proofType === "github" && p.githubUsername && (
+                      <span className="truncate text-xs text-muted" title="GitHub usernames aren't verified yet">
+                        🐙 @{p.githubUsername} · unverified
+                      </span>
+                    )}
                     {c.proofType === "duolingo" && p.duolingoUsername && (
                       <span className="truncate text-xs text-muted" title={p.duolingoVerified ? "Owner verified with a bio code" : "Account not verified: anyone could have typed this username"}>
                         🦉 @{p.duolingoUsername} {p.duolingoVerified ? "✓" : "· unverified"}
@@ -578,6 +586,7 @@ function RulesCard({ d }: { d: ChallengeData }) {
             📍 {c.gymLabel || "Gym"} (within {c.gymRadiusM} m) · check-out ≥ {Math.round((c.minGapSecs ?? 2700) / 60)} min after check-in
           </li>
         )}
+        {c.proofType === "github" && <li>🐙 Push ≥ {String(c.plan.minCommits ?? 1)} commit(s) to public GitHub repos each {c.demo ? "round" : "day"} (counted by push time; usernames aren&apos;t verified)</li>}
         {c.proofType === "duolingo" && <li>🦉 Earn ≥ {c.minXp} XP each {c.demo ? "round" : "day"}, counted from your starting XP (streaks don&apos;t matter)</li>}
         {c.proofType === "honor" && <li>🤝 Daily self-report (honor system)</li>}
         <li>⚖️ Code checks facts → AI judges proof → appeals (coming soon)</li>

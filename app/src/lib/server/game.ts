@@ -7,6 +7,7 @@ import { dayAt, dayEnd, pickWindowTime, type DayClock } from "../time";
 import { PLAYER_STATUS, REASON_CODES } from "../solana/constants";
 import { describePose, poseFromArray, poseForJudge } from "../pose";
 import { fetchDuolingo, evaluateDuolingo } from "../duolingo";
+import { countPushedCommits } from "../github";
 import { judgePhoto, type JudgeResult } from "../ai";
 import { withinGeofence } from "../geo";
 import * as chain from "./chain";
@@ -505,6 +506,44 @@ export async function checkDuolingo(ch: Challenge, p: Participant, opts: { day?:
   return { ...r, day, recorded: true, tx: proof.tx };
 }
 
+// ---------------------------------------------------------------- GitHub
+
+/** "I pushed — check" (manual) or the scheduled check during the grace period after a day. */
+export async function checkGithub(ch: Challenge, p: Participant, opts: { day?: number; source: "scheduled" | "manual" }) {
+  const now = Math.floor(Date.now() / 1000);
+  const day = opts.day ?? dayAt(clockOf(ch, p), now);
+  if (p.status !== "active") throw new HttpError(400, "You're no longer active");
+  if (day < 1 || day > ch.numDays) throw new HttpError(400, "The challenge isn't running for you right now");
+  if (passedDay(p, day)) return { pass: true, already: true, message: "Already passed today ✅", day };
+  if (!p.githubUsername) throw new HttpError(400, "Add your GitHub username first");
+  const min = (JSON.parse(ch.plan) as { minCommits?: number }).minCommits ?? 1;
+  const from = p.startTs + (day - 1) * ch.dayLen;
+  const r = await countPushedCommits(p.githubUsername, from, from + ch.dayLen);
+  if (r.commits < min)
+    return {
+      pass: false,
+      day,
+      commits: r.commits,
+      message: `${r.commits} commit${r.commits === 1 ? "" : "s"} pushed to public repos so far this ${ch.demo ? "round" : "day"} — you need ${min}. GitHub's feed can lag a few minutes after a push.`,
+    };
+  const proof = await recordVerdict({
+    ch,
+    p,
+    day,
+    kind: "github",
+    verdict: "pass",
+    reason: `${r.commits} commit${r.commits === 1 ? "" : "s"} pushed (${r.repos.slice(0, 3).join(", ")}) ✅`,
+    reasonCode: 0,
+    proofHash: sha256(JSON.stringify({ u: p.githubUsername, day, events: r.ids })),
+    metricA: r.commits,
+    metricB: r.pushes,
+    checks: { commits: r.commits, pushes: r.pushes, repos: r.repos, minCommits: min },
+  });
+  return { pass: true, day, commits: r.commits, message: proof.reason, tx: proof.tx };
+}
+
+const githubChecked = new Map<string, number>();
+
 // ---------------------------------------------------------------- bots (demo)
 
 type BotScript = { name?: string; days?: Record<string, "pass" | "wrong_pose" | "skip">; quitDay?: number };
@@ -592,6 +631,17 @@ export async function tickChallenge(ch: ChallengeWithPlayers, now: number) {
           }
         }
       }
+      // GitHub: re-check a finished day during its grace period (the public feed can lag).
+      // Throttled to stay inside GitHub's unauthenticated rate limit.
+      if (ch.proofType === "github" && !p.isBot && p.githubUsername && day >= 2) {
+        const b = Math.min(day - 1, ch.numDays);
+        const key = `${p.id}:${b}`;
+        const every = ch.dayLen >= 3600 ? 300 : 45;
+        if (!passedDay(p, b) && now < dayEnd(c, b) + ch.graceSecs && now - (githubChecked.get(key) ?? 0) >= every) {
+          githubChecked.set(key, now);
+          await checkGithub(ch, p, { day: b, source: "scheduled" });
+        }
+      }
       // Surprise windows for photo challenges.
       if (ch.proofType === "photo" && perDayOf(ch) === 1 && day >= 1 && day <= ch.numDays && !passedDay(p, day)) {
         let w = await db.proofWindow.findUnique({ where: { participantId_day_index: { participantId: p.id, day, index: 0 } } });
@@ -625,10 +675,14 @@ export async function tickChallenge(ch: ChallengeWithPlayers, now: number) {
     }
   }
 
-  // Settle once every member's last day (plus grace) is over.
+  // Settle once every member's last day (plus grace) is over, or earlier as soon as the
+  // outcome is decided after joining closed: at most one player left (group/public) or
+  // the solo player is out. The program enforces the same rule.
   const lastEnd = Math.max(0, ...ch.participants.map((p) => p.startTs + ch.numDays * ch.dayLen));
   const startedOrEmpty = ch.participants.length > 0 || now > ch.refStartTs + 14 * 3600;
-  if (startedOrEmpty && now >= Math.max(lastEnd, ch.refStartTs) + ch.graceSecs + 2) {
+  const stillIn = await db.participant.count({ where: { challengeId: ch.id, status: "active" } });
+  const decided = now >= ch.refStartTs + 2 && ch.participants.length > 0 && (ch.mode === "solo" ? stillIn === 0 : stillIn <= 1);
+  if (decided || (startedOrEmpty && now >= Math.max(lastEnd, ch.refStartTs) + ch.graceSecs + 2)) {
     await settleChallenge(ch.id).catch((e) => warnOnce(`settle-${ch.id}`, `settle ${ch.id.slice(0, 6)}: ${friendlyChainError(String(e))}`));
   }
 }

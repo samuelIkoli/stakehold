@@ -33,5 +33,7 @@ export type ChallengeRules = {
   minGapSecs?: number;
   /** Photos needed per day (only present when > 1). */
   perDay?: number;
+  /** GitHub: commits pushed per day/round. */
+  minCommits?: number;
   gym?: { lat: number; lng: number; radiusM: number; label?: string };
 };

@@ -460,3 +460,59 @@ fn join_after_start_rejected() {
     let late = env.funded(SOL);
     assert!(env.join(&ch, &late).is_err());
 }
+
+#[test]
+fn early_settle_last_one_standing() {
+    let mut env = Env::new();
+    let creator = env.funded(5 * SOL);
+    let ch = env.create(&creator, 6, MODE_GROUP, 3, FAIL_TO_POOL);
+    let a = env.funded(SOL);
+    let b = env.funded(SOL);
+    let pa = env.join(&ch, &a).unwrap();
+    let pb = env.join(&ch, &b).unwrap();
+    // Two players still in: no early settlement.
+    env.set_time(T0 + DAY + 10);
+    assert!(env.settle(&creator, &ch, &[pa, pb], None).is_err());
+    // b quits on day 1 → a is the last one standing and takes the pot immediately.
+    env.forfeit(&b, &ch).unwrap();
+    env.settle(&creator, &ch, &[pa, pb], None).unwrap();
+    let state: Challenge = env.load(&ch);
+    assert_eq!(state.survivor_count, 1);
+    assert_eq!(state.share_lamports, 2 * STAKE);
+    let before = env.lamports(&a.pubkey());
+    env.claim(&a, &ch).unwrap();
+    assert_eq!(env.lamports(&a.pubkey()), before + 2 * STAKE - 5000);
+}
+
+#[test]
+fn early_settle_still_checks_finished_days() {
+    let mut env = Env::new();
+    let creator = env.funded(5 * SOL);
+    let ch = env.create(&creator, 7, MODE_GROUP, 3, FAIL_TO_POOL);
+    let a = env.funded(SOL);
+    let b = env.funded(SOL);
+    let pa = env.join(&ch, &a).unwrap();
+    let pb = env.join(&ch, &b).unwrap();
+    // Day 1 is over (with grace) and b never passed it; a quits on day 2.
+    env.set_time(T0 + 2 * DAY + GRACE + 1);
+    env.forfeit(&a, &ch).unwrap();
+    let pool_before = env.lamports(&pool_pda());
+    env.settle(&creator, &ch, &[pa, pb], None).unwrap();
+    let state: Challenge = env.load(&ch);
+    assert_eq!(state.survivor_count, 0, "b missed a finished day, so nobody survives");
+    assert_eq!(env.lamports(&pool_pda()), pool_before + 2 * STAKE);
+}
+
+#[test]
+fn solo_settles_early_once_out() {
+    let mut env = Env::new();
+    let solo = env.funded(2 * SOL);
+    let ch = env.create(&solo, 8, MODE_SOLO, 3, FAIL_TO_POOL);
+    let p = env.join(&ch, &solo).unwrap();
+    env.set_time(T0 + DAY + 10);
+    assert!(env.settle(&solo, &ch, &[p], None).is_err(), "solo player still in: wait for the end");
+    env.forfeit(&solo, &ch).unwrap();
+    let pool_before = env.lamports(&pool_pda());
+    env.settle(&solo, &ch, &[p], None).unwrap();
+    assert_eq!(env.lamports(&pool_pda()), pool_before + STAKE);
+}

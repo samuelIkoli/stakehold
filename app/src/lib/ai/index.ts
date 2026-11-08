@@ -120,7 +120,7 @@ const PLAN_SCHEMA = {
   type: "OBJECT",
   properties: {
     title: { type: "STRING", description: "Short catchy challenge title, max 40 chars." },
-    proofType: { type: "STRING", enum: ["photo", "gym", "duolingo", "honor"] },
+    proofType: { type: "STRING", enum: ["photo", "gym", "duolingo", "github", "honor"] },
     rule: { type: "STRING", description: "Exact daily rule the AI judge will check in a photo, or the data rule." },
     strength: { type: "STRING", enum: ["strong", "good", "honor"] },
     strengthReason: { type: "STRING" },
@@ -128,6 +128,7 @@ const PLAN_SCHEMA = {
     windowEndHour: { type: "INTEGER" },
     windowMinutes: { type: "INTEGER" },
     minXp: { type: "INTEGER", nullable: true },
+    minCommits: { type: "INTEGER", nullable: true, description: "GitHub only: commits to push per day/round." },
     minGapMinutes: { type: "INTEGER", nullable: true },
     perDay: { type: "INTEGER", nullable: true, description: "How many separate photo proofs per day (1-5)." },
     numDays: { type: "INTEGER", nullable: true, description: "Number of days if the creator stated or implied it, else null." },
@@ -143,6 +144,7 @@ export async function proposePlan(habit: string): Promise<ProofPlan> {
 ${INJECTION_GUARD}
 Available proof types:
 - "duolingo": verified data from the user's public Duolingo profile: XP gained each day/round >= minXp (streaks are NOT checked). Strength "good": the XP data is real, but the account is linked by username and ownership verification is optional. Use for language learning on Duolingo.
+- "github": public GitHub activity: commits pushed to public repos each day/round >= minCommits (default 1), timed by when GitHub received the push. Strength "good". Use for coding habits ("commit every day", "ship code daily").
 - "gym": check-in photo + check-out photo with random poses, GPS within 100 m of the gym, and a minimum time gap (minGapMinutes, default 45). Strength "good". Use for gym workouts.
 - "photo": a photo with a random pose taken during a surprise 10-minute window that shows the habit (e.g. a book open at today's page, a finished run on a treadmill display, a meal). Strength "good".
 - "honor": daily self-report only. Strength "honor". Use ONLY when nothing can be photographed or measured.
@@ -150,7 +152,7 @@ Rules:
 - Be honest about strength. Habits about NOT doing something ("no sugar", "no smoking", "no social media") cannot be proven by a photo: say so in strengthReason, set reframe to a positive provable habit (e.g. "no sugar" -> "photo of every meal"), and choose proofType "photo" for the reframe if the user would accept it, else "honor".
 - windowStartHour/windowEndHour are local hours (0-23) when the surprise window may open; pick sensible hours for the habit. windowMinutes is 10 unless there's a reason.
 - RESPECT THE CREATOR'S NUMBERS. If they say an amount, count or time frame, use it exactly instead of a default:
-  - "50 XP" -> minXp 50 (default 30 only when no number is given).
+  - "50 XP" -> minXp 50 (default 30 only when no number is given). "3 commits a day" -> minCommits 3 (default 1).
   - "twice a day" / "2 meals" / "3 times" -> perDay 2 / 2 / 3 (photo only, max 5). Default perDay 1.
   - "today" / "just today" -> numDays 1. "for 2 weeks" -> numDays 14. "every weekday for a month" -> numDays 30. Else numDays null.
   - "in the next hour" / "within 30 minutes" / "by tonight" -> roundMinutes 60 / 30 / null (only for deadlines under 24 h measured from now). Else null.
@@ -169,7 +171,7 @@ Rules:
 }
 
 export function normalizePlan(p: Partial<ProofPlan>): ProofPlan {
-  const type: ProofType = (["photo", "gym", "duolingo", "honor"] as const).includes(p.proofType as ProofType)
+  const type: ProofType = (["photo", "gym", "duolingo", "github", "honor"] as const).includes(p.proofType as ProofType)
     ? (p.proofType as ProofType)
     : "photo";
   const strength = type === "honor" ? "honor" : "good";
@@ -187,6 +189,7 @@ export function normalizePlan(p: Partial<ProofPlan>): ProofPlan {
     windowEndHour: Math.min(24, end),
     windowMinutes: Math.min(60, Math.max(2, Math.round(p.windowMinutes ?? 10))),
     minXp: type === "duolingo" ? Math.max(1, Math.round(p.minXp ?? 30)) : undefined,
+    minCommits: type === "github" ? Math.min(100, Math.max(1, Math.round(p.minCommits ?? 1))) : undefined,
     minGapMinutes:
       type === "gym" ? Math.max(1, Math.round(p.minGapMinutes ?? 45)) : type === "photo" && perDay > 1 ? Math.max(1, Math.round(p.minGapMinutes ?? 60)) : undefined,
     perDay: type === "photo" ? perDay : 1,

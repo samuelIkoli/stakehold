@@ -37,7 +37,7 @@ const Rules = z.object({
   v: z.literal(1),
   title: z.string().min(2).max(80),
   habit: z.string().min(2).max(500),
-  proofType: z.enum(["photo", "gym", "duolingo", "honor"]),
+  proofType: z.enum(["photo", "gym", "duolingo", "github", "honor"]),
   rule: z.string().min(2).max(600),
   strength: z.enum(["strong", "good", "honor"]),
   windowStartHour: z.number().int().min(0).max(23),
@@ -46,6 +46,7 @@ const Rules = z.object({
   minXp: z.number().int().optional(),
   minGapSecs: z.number().int().optional(),
   perDay: z.number().int().min(2).max(5).optional(),
+  minCommits: z.number().int().min(1).max(100).optional(),
   gym: z.object({ lat: z.number(), lng: z.number(), radiusM: z.number(), label: z.string().optional() }).optional(),
 });
 
