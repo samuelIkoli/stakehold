@@ -433,17 +433,27 @@ export async function recordBaseline(ch: Challenge, p: Participant) {
 }
 
 /**
- * After a wallet verifies its Duolingo account: attach it to every active Duolingo
+ * After a wallet links its Duolingo account: attach it to every active Duolingo
  * challenge that wallet joined without one, and take the starting point right away if
  * the challenge has already begun (otherwise the scheduler takes it at the start).
+ * One Duolingo account can't be used by two players in the same challenge; those
+ * challenges are returned as conflicts.
  */
-export async function attachDuolingo(wallet: string, username: string) {
+export async function attachDuolingo(wallet: string, username: string): Promise<string[]> {
+  const conflicts: string[] = [];
   const now = Math.floor(Date.now() / 1000);
   const parts = await db.participant.findMany({
     where: { wallet, status: "active", duolingoUsername: null, challenge: { proofType: "duolingo", status: "active" } },
     include: { challenge: true },
   });
   for (const part of parts) {
+    const clash = await db.participant.findFirst({
+      where: { challengeId: part.challengeId, NOT: { id: part.id }, duolingoUsername: { equals: username } },
+    });
+    if (clash) {
+      conflicts.push(part.challenge.title);
+      continue;
+    }
     const p = await db.participant.update({ where: { id: part.id }, data: { duolingoUsername: username } });
     const ch = part.challenge;
     const day = dayAt(clockOf(ch, p), now);
@@ -452,6 +462,7 @@ export async function attachDuolingo(wallet: string, username: string) {
       if (!hasBase) await recordBaseline(ch, p).catch((e) => console.warn("[duolingo] baseline on link failed:", String(e)));
     }
   }
+  return conflicts;
 }
 
 /** "I'm done for today" (manual) or the scheduled end-of-day check. */

@@ -142,7 +142,7 @@ export async function proposePlan(habit: string): Promise<ProofPlan> {
   const system = `You design fair, hard-to-cheat proof plans for Stakehold habit challenges.
 ${INJECTION_GUARD}
 Available proof types:
-- "duolingo": verified data from the user's public Duolingo profile: XP gained each day/round >= minXp (streaks are NOT checked). Strength "strong". Use for language learning on Duolingo.
+- "duolingo": verified data from the user's public Duolingo profile: XP gained each day/round >= minXp (streaks are NOT checked). Strength "good": the XP data is real, but the account is linked by username and ownership verification is optional. Use for language learning on Duolingo.
 - "gym": check-in photo + check-out photo with random poses, GPS within 100 m of the gym, and a minimum time gap (minGapMinutes, default 45). Strength "good". Use for gym workouts.
 - "photo": a photo with a random pose taken during a surprise 10-minute window that shows the habit (e.g. a book open at today's page, a finished run on a treadmill display, a meal). Strength "good".
 - "honor": daily self-report only. Strength "honor". Use ONLY when nothing can be photographed or measured.
@@ -172,7 +172,7 @@ export function normalizePlan(p: Partial<ProofPlan>): ProofPlan {
   const type: ProofType = (["photo", "gym", "duolingo", "honor"] as const).includes(p.proofType as ProofType)
     ? (p.proofType as ProofType)
     : "photo";
-  const strength = type === "duolingo" ? "strong" : type === "honor" ? "honor" : "good";
+  const strength = type === "honor" ? "honor" : "good";
   const clampHour = (h: unknown, d: number) => (Number.isFinite(h) ? Math.min(23, Math.max(0, Math.round(h as number))) : d);
   const start = clampHour(p.windowStartHour, 7);
   const end = Math.max(start + 1, clampHour(p.windowEndHour, 21));

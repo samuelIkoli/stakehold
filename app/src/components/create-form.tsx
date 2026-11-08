@@ -26,7 +26,7 @@ const DEFAULT_PLAN: ProofPlan = {
   tips: [],
 };
 
-const strengthFor = (t: ProofType) => (t === "duolingo" ? "strong" : t === "honor" ? "honor" : "good");
+const strengthFor = (t: ProofType) => (t === "honor" ? "honor" : "good");
 
 export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | "public" | "solo" }) {
   const router = useRouter();
@@ -513,7 +513,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
               <div className="mt-5 rounded-2xl border border-line bg-surface-2/60 p-4">
                 <div className="mb-1 text-sm font-semibold">🦉 Your Duolingo account {duoOk ? "✓" : "(required)"}</div>
                 <p className="mb-3 text-xs text-muted">We read your public XP. Your starting XP is recorded when the challenge starts; only XP after that counts.</p>
-                <DuolingoLink onVerified={() => setDuoOk(true)} />
+                <DuolingoLink onLinked={() => setDuoOk(true)} />
               </div>
             )}
             {!solo && (

@@ -530,7 +530,7 @@ function DuolingoProof({ d, me, reload }: { d: ChallengeData; me: ParticipantRow
         <p className="mt-1 mb-4 text-sm text-muted">
           We need your username to read your XP. Once it&apos;s verified, your starting XP is recorded straight away; only XP you earn after that counts.
         </p>
-        <DuolingoLink onVerified={() => void reload()} />
+        <DuolingoLink onLinked={() => void reload()} />
       </Card>
     );
 

@@ -34,6 +34,7 @@ export type ParticipantRow = {
   daysPassed: number;
   passedBitmap: string;
   duolingoUsername: string | null;
+  duolingoVerified?: boolean;
   isBot: boolean;
   joinTx: string;
   claimTx: string | null;

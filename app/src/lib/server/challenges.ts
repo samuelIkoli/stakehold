@@ -124,6 +124,10 @@ export async function challengeView(id: string, viewer?: string | null) {
     chain.connection().getAccountInfo(chain.vaultPda(new PublicKey(id))).catch(() => null),
   ]);
   const onchain = ch.status === "settled" ? await chain.fetchChallenge(new PublicKey(id)).catch(() => null) : null;
+  const verifiedDuo =
+    ch.proofType === "duolingo"
+      ? new Set((await db.duoLink.findMany({ where: { wallet: { in: participants.map((p) => p.wallet) }, verified: true } })).map((l) => `${l.wallet}:${l.username}`))
+      : new Set<string>();
   return {
     challenge: { ...ch, plan: JSON.parse(ch.plan) },
     settlement: onchain
@@ -139,6 +143,7 @@ export async function challengeView(id: string, viewer?: string | null) {
     participants: participants.map((p) => ({
       ...p,
       botScript: undefined,
+      duolingoVerified: !!p.duolingoUsername && verifiedDuo.has(`${p.wallet}:${p.duolingoUsername}`),
       proofs: proofs
         .filter((x) => x.participantId === p.id)
         .map((x) => ({ ...x, files: undefined, checks: JSON.parse(x.checks) })),

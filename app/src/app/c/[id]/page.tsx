@@ -240,7 +240,7 @@ function MyPanel({ d, me, t, canJoin, reload }: { d: ChallengeData; me?: Partici
             {c.proofType === "duolingo" && (
               <div className="rounded-2xl border border-line p-4">
                 <div className="mb-2 text-sm font-semibold">Link your Duolingo account (required)</div>
-                <DuolingoLink onVerified={() => setDuoOk(true)} />
+                <DuolingoLink onLinked={() => setDuoOk(true)} />
               </div>
             )}
             <Button size="lg" className="w-full" onClick={join} loading={busy === "join"} disabled={c.proofType === "duolingo" && !duoOk && !!wallet}>
@@ -447,6 +447,11 @@ function Leaderboard({ d, t, meWallet }: { d: ChallengeData; t: ReturnType<typeo
                     <span className={cx("truncate font-semibold", out && "line-through decoration-out/60")}>{p.name || shortKey(p.wallet)}</span>
                     {p.wallet === meWallet && <Badge tone="flame">you</Badge>}
                     {p.isBot && <Badge tone="violet">scripted bot</Badge>}
+                    {c.proofType === "duolingo" && p.duolingoUsername && (
+                      <span className="truncate text-xs text-muted" title={p.duolingoVerified ? "Owner verified with a bio code" : "Account not verified: anyone could have typed this username"}>
+                        🦉 @{p.duolingoUsername} {p.duolingoVerified ? "✓" : "· unverified"}
+                      </span>
+                    )}
                     <span className="text-xs text-muted">#{i + 1}</span>
                   </div>
                   <div className="truncate text-xs text-muted">

@@ -8,8 +8,8 @@ export async function GET() {
   try {
     const wallet = await requireWallet();
     const link = await db.duoLink.findUnique({ where: { wallet } });
-    // An account verified earlier also covers challenges joined since.
-    if (link?.verified) await attachDuolingo(wallet, link.username);
+    // A linked account also covers challenges joined since.
+    if (link) await attachDuolingo(wallet, link.username);
     return Response.json({ link });
   } catch (e) {
     return errorResponse(e);
@@ -18,7 +18,10 @@ export async function GET() {
 
 const Start = z.object({ username: z.string().min(1).max(60) });
 
-/** Step 1: choose a username → get a one-time code to paste into the Duolingo bio. */
+/**
+ * Link a Duolingo username to this wallet. It works immediately (shown as "unverified");
+ * the one-time code in the response lets the owner verify it later for a ✓ badge.
+ */
 export async function POST(req: Request) {
   try {
     const wallet = await requireWallet();
@@ -27,13 +30,16 @@ export async function POST(req: Request) {
     if (!prof) throw new HttpError(404, "No public Duolingo profile with that username");
     const taken = await db.duoLink.findFirst({ where: { username: prof.username, verified: true, NOT: { wallet } } });
     if (taken) throw new HttpError(409, "That Duolingo account is already linked to another wallet");
-    const code = makeLinkCode();
+    const prev = await db.duoLink.findUnique({ where: { wallet } });
+    const same = prev && prev.username.toLowerCase() === prof.username.toLowerCase();
+    const code = same ? prev.code : makeLinkCode();
     const link = await db.duoLink.upsert({
       where: { wallet },
       create: { wallet, username: prof.username, userId: String(prof.id), code },
-      update: { username: prof.username, userId: String(prof.id), code, verified: false, verifiedAt: null },
+      update: same ? {} : { username: prof.username, userId: String(prof.id), code, verified: false, verifiedAt: null },
     });
-    return Response.json({ link, profile: { totalXp: prof.totalXp, streak: prof.streak } });
+    const conflicts = await attachDuolingo(wallet, link.username);
+    return Response.json({ link, profile: { totalXp: prof.totalXp, streak: prof.streak }, conflicts });
   } catch (e) {
     return errorResponse(e);
   }
