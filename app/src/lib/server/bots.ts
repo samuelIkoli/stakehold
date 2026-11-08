@@ -1,9 +1,9 @@
-// Demo bot wallets (devnet only). Keys live in keys/demo-bots.json (git-ignored).
+// Demo bot wallets (devnet only). Keys live in keys/demo-bots.json (git-ignored), or BOTS_FILE when hosted.
 import fs from "node:fs";
 import path from "node:path";
 import { Keypair } from "@solana/web3.js";
 
-const FILE = path.resolve(process.cwd(), "..", "keys", "demo-bots.json");
+const FILE = process.env.BOTS_FILE || path.resolve(process.cwd(), "..", "keys", "demo-bots.json");
 
 export const BOT_NAMES = ["Ada", "Kofi", "Mei", "Tunde", "Zara"];
 

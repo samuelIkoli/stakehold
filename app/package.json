@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "prisma db push --skip-generate >/dev/null 2>&1; next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "prisma db push --skip-generate && next start",
     "lint": "eslint",
     "test": "vitest run",
     "db:push": "prisma db push",
@@ -13,6 +13,9 @@
     "init:devnet": "tsx --tsconfig tsconfig.json scripts/with-env.ts scripts/init-devnet.ts",
     "seed:demo": "tsx --tsconfig tsconfig.json scripts/with-env.ts scripts/seed-demo.ts",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "dependencies": {
     "next": "16.4.5",
