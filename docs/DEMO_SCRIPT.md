@@ -4,7 +4,7 @@
 
 1. `npm run dev`, then open `http://localhost:3000/demo` and check that all four health chips are green (program, config, AI, judge balance).
 2. Phantom is on **devnet** with ≥ 0.2 SOL (faucet.solana.com).
-3. **Don't do Duolingo today** before the demo, so the streak goes +1 live.
+3. **Have a Duolingo lesson ready** for the demo, so the XP jump happens live.
 4. On `/demo`: **Seed photo challenge + bots** (day length 120 s, 2 days, lobby ~90 s). Open the challenge in a second tab and **join with Phantom**.
 5. Have a glass of water nearby: the demo rule is "holding a glass/bottle of water". Also have a *pre-taken* photo printed or open on a second phone (for the rejection beat).
 

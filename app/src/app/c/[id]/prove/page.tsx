@@ -7,6 +7,7 @@ import { useChallenge, passed, dayOf, type ChallengeData, type ParticipantRow } 
 import { Alert, Badge, Button, Card, Countdown, Spinner, TxLink, cx, inputCls, useNow } from "@/components/ui";
 import { PoseCard } from "@/components/pose-card";
 import { Camera, getPosition } from "@/components/camera";
+import { DuolingoLink } from "@/components/duolingo-link";
 import { useConnectWallet, useSession } from "@/components/providers";
 import { poseFromArray } from "@/lib/pose";
 
@@ -80,6 +81,8 @@ function ProofFlow({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; re
   const c = d.challenge;
   const now = useNow();
   const day = dayOf(me, c.dayLen, now);
+  // Duolingo players can (and should) link their account before day 1 starts.
+  if (c.proofType === "duolingo" && !me.duolingoUsername && day <= c.numDays) return <DuolingoProof d={d} me={me} reload={reload} />;
   if (day < 1) return <Alert className="mt-6">Day 1 starts in <Countdown to={me.startTs} />.</Alert>;
   if (day > c.numDays) return <Alert className="mt-6">The challenge has ended. Settlement is on its way.</Alert>;
   if (passed(me, day))
@@ -97,7 +100,7 @@ function ProofFlow({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; re
     );
   if (c.proofType === "photo") return <PhotoProof d={d} me={me} day={day} reload={reload} />;
   if (c.proofType === "gym") return <GymProof d={d} me={me} day={day} reload={reload} />;
-  if (c.proofType === "duolingo") return <DuolingoProof d={d} reload={reload} />;
+  if (c.proofType === "duolingo") return <DuolingoProof d={d} me={me} reload={reload} />;
   return <HonorProof d={d} reload={reload} />;
 }
 
@@ -476,9 +479,9 @@ function Step({ n, label, active, done }: { n: number; label: string; active: bo
 
 // ------------------------------------------------------------------ duolingo
 
-function DuolingoProof({ d, reload }: { d: ChallengeData; reload: () => Promise<void> }) {
+function DuolingoProof({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; reload: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
-  const [r, setR] = useState<{ pass: boolean; message: string; xpGained?: number; streakNow?: number; tx?: string; unchanged?: boolean } | null>(null);
+  const [r, setR] = useState<{ pass: boolean; message: string; xpGained?: number; tx?: string; unchanged?: boolean; baselineJustTaken?: boolean } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [retryIn, setRetryIn] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -494,8 +497,8 @@ function DuolingoProof({ d, reload }: { d: ChallengeData; reload: () => Promise<
       const j = await res.json();
       if (!res.ok) throw new Error(j.error);
       setR(j);
-      if (j.pass) await reload();
-      else if (j.unchanged || j.streakNow === j.streakBefore) {
+      if (j.pass || j.baselineJustTaken) await reload();
+      else if (j.unchanged) {
         // Duolingo's public profile can lag a minute behind — retry automatically.
         setRetryIn(60);
         if (timer.current) clearInterval(timer.current);
@@ -517,16 +520,38 @@ function DuolingoProof({ d, reload }: { d: ChallengeData; reload: () => Promise<
     }
   }
 
+  const unit = d.challenge.demo ? "round" : "day";
+  const base = me.proofs.find((p) => p.kind === "baseline");
+  if (!me.duolingoUsername)
+    return (
+      <Card className="mt-6 p-6">
+        <div className="text-4xl">🦉</div>
+        <div className="font-display mt-2 text-xl font-bold">Link your Duolingo account</div>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          We need your username to read your XP. Once it&apos;s verified, your starting XP is recorded straight away; only XP you earn after that counts.
+        </p>
+        <DuolingoLink onVerified={() => void reload()} />
+      </Card>
+    );
+
   return (
     <div className="mt-6 space-y-4">
       <Card className="p-6 text-center">
         <div className="text-5xl">🦉</div>
         <p className="mt-3 text-muted">
-          Finish today&apos;s lesson(s) in Duolingo, then tap below. We read your public profile: you need <b className="text-ink">≥ {d.challenge.minXp} XP</b> since the last snapshot{" "}
-          <b className="text-ink">and</b> your streak must go up by exactly 1.
+          Do your lessons in Duolingo, then tap below. You need <b className="text-ink">≥ {d.challenge.minXp} XP</b> earned this {unit}, counted from your starting point
+          {base?.metricA != null ? (
+            <>
+              {" "}
+              (<b className="text-ink">{base.metricA} XP</b> at {new Date(base.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})
+            </>
+          ) : (
+            <> (recorded automatically when the {unit} starts)</>
+          )}
+          . Streaks don&apos;t matter. Linked as <b className="text-ink">@{me.duolingoUsername}</b>.
         </p>
         <Button size="lg" className="mt-5 w-full" onClick={check} loading={busy}>
-          I&apos;m done for today
+          I&apos;m done — check my XP
         </Button>
         {retryIn > 0 && <p className="mt-3 text-sm text-muted">Duolingo hasn&apos;t updated yet — checking again in {retryIn}s…</p>}
       </Card>
@@ -542,7 +567,7 @@ function DuolingoProof({ d, reload }: { d: ChallengeData; reload: () => Promise<
         </Card>
       )}
       {err && <Alert tone="out">{err}</Alert>}
-      <p className="text-center text-[11px] text-muted">A scheduled snapshot also runs at your midnight, so if you forget to tap, a qualifying day still counts.</p>
+      <p className="text-center text-[11px] text-muted">We also check automatically when the {unit} ends, so if you forget to tap, enough XP still counts.</p>
     </div>
   );
 }

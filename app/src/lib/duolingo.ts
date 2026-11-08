@@ -60,19 +60,17 @@ export function evaluateDuolingo(
   before: { totalXp: number; streak: number },
   now: { totalXp: number; streak: number },
   minXp: number,
-  missedBoundary = false,
 ): DuoRuleResult {
+  // XP only: streaks are ignored (someone may already have kept today's streak before joining).
   const xpGained = now.totalXp - before.totalXp;
-  const streakOk = missedBoundary ? now.streak > before.streak : now.streak === before.streak + 1;
-  const xpOk = xpGained >= minXp;
-  const pass = xpOk && streakOk;
-  const reasonCode = pass ? (missedBoundary ? 13 : 0) : !xpOk ? 7 : 8;
-  const message = pass
-    ? `+${xpGained} XP, streak ${now.streak} ✅ you're safe today`
-    : !xpOk
-      ? `+${xpGained} XP so far — you need at least ${minXp} XP today`
-      : now.streak === before.streak
-        ? `+${xpGained} XP, but your streak hasn't ticked over yet (${now.streak}). Finish a lesson that extends today's streak.`
-        : `Streak went from ${before.streak} to ${now.streak} — it must go up by exactly 1 (freezes and resets don't count).`;
-  return { pass, xpGained, streakNow: now.streak, streakBefore: before.streak, reasonCode, message, benefitOfDoubt: missedBoundary && pass };
+  const pass = xpGained >= minXp;
+  return {
+    pass,
+    xpGained,
+    streakNow: now.streak,
+    streakBefore: before.streak,
+    reasonCode: pass ? 0 : 7,
+    message: pass ? `+${xpGained} XP ✅ you're safe` : `+${xpGained} XP so far — you need at least ${minXp} XP`,
+    benefitOfDoubt: false,
+  };
 }

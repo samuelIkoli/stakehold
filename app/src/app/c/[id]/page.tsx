@@ -573,7 +573,7 @@ function RulesCard({ d }: { d: ChallengeData }) {
             📍 {c.gymLabel || "Gym"} (within {c.gymRadiusM} m) · check-out ≥ {Math.round((c.minGapSecs ?? 2700) / 60)} min after check-in
           </li>
         )}
-        {c.proofType === "duolingo" && <li>🦉 ≥ {c.minXp} XP since last snapshot AND streak +1 each day</li>}
+        {c.proofType === "duolingo" && <li>🦉 Earn ≥ {c.minXp} XP each {c.demo ? "round" : "day"}, counted from your starting XP (streaks don&apos;t matter)</li>}
         {c.proofType === "honor" && <li>🤝 Daily self-report (honor system)</li>}
         <li>⚖️ Code checks facts → AI judges proof → appeals (coming soon)</li>
         <li>

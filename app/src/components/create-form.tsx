@@ -8,6 +8,7 @@ import { useConnectWallet, useSession } from "./providers";
 import { canonicalJson, sha256Hex, type ChallengeRules } from "@/lib/canonical";
 import { localDate, memberStart, nextDate, nextDemoMidnight, utcMidnightOf } from "@/lib/time";
 import { createChallengeTx, friendlyError } from "@/lib/client/tx";
+import { DuolingoLink } from "./duolingo-link";
 import { DEMO_CHARITIES, SOLO_BONUS_BPS, SOLO_BONUS_CAP_SOL } from "@/lib/charities";
 import type { ProofPlan, ProofType } from "@/lib/ai/types";
 
@@ -52,6 +53,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
   const [failDest, setFailDest] = useState<"pool" | "charity">("charity");
   const [charity, setCharity] = useState(0);
   const [description, setDescription] = useState("");
+  const [duoOk, setDuoOk] = useState(false);
   const [gym, setGym] = useState<{ lat: string; lng: string; radiusM: number; label: string }>({ lat: "", lng: "", radiusM: 100, label: "" });
   const [locating, setLocating] = useState(false);
 
@@ -151,6 +153,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
     const now = Math.floor(Date.now() / 1000);
     if (timing.myStart <= now + 30) return setError("Start time must be in the future — pick a later date");
     if (p.proofType === "gym" && (!gym.lat || !gym.lng)) return setError("Set the gym location");
+    if (p.proofType === "duolingo" && (mode === "solo" || playing) && !duoOk) return setError("Link and verify your Duolingo account first (step 3)");
     setBusy(true);
     try {
       await signIn();
@@ -176,7 +179,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
       };
       const hash = await sha256Hex(canonicalJson(rules));
       const solo = mode === "solo";
-      const joinNow = solo || (playing && p.proofType !== "duolingo");
+      const joinNow = solo || playing;
       const { sig, challenge } = await createChallengeTx(connection, wallet, {
         mode: mode === "group" ? 0 : mode === "public" ? 1 : 2,
         demo,
@@ -199,11 +202,12 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
       });
       if (!reg.ok) throw new Error((await reg.json()).error);
       if (joinNow) {
-        await fetch(`/api/challenges/${challenge}/join`, {
+        const j = await fetch(`/api/challenges/${challenge}/join`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ tz, tx: sig }),
         });
+        if (!j.ok) console.warn("join registration:", (await j.json().catch(() => ({}))).error);
       }
       router.push(`/c/${challenge}?created=1`);
     } catch (e) {
@@ -278,7 +282,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
                 <select className={inputCls} value={p.proofType} onChange={(e) => set("proofType", e.target.value as ProofType)}>
                   <option value="photo">📸 Photo + random pose</option>
                   <option value="gym">🏋️ Gym check-in + check-out + GPS</option>
-                  <option value="duolingo">🦉 Duolingo XP + streak (verified data)</option>
+                  <option value="duolingo">🦉 Duolingo XP (verified data)</option>
                   <option value="honor">🤝 Honor system (self-report)</option>
                 </select>
               </Field>
@@ -505,13 +509,19 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
               </div>
             )}
 
-            {!solo && p.proofType !== "duolingo" && (
+            {p.proofType === "duolingo" && (solo || playing) && (
+              <div className="mt-5 rounded-2xl border border-line bg-surface-2/60 p-4">
+                <div className="mb-1 text-sm font-semibold">🦉 Your Duolingo account {duoOk ? "✓" : "(required)"}</div>
+                <p className="mb-3 text-xs text-muted">We read your public XP. Your starting XP is recorded when the challenge starts; only XP after that counts.</p>
+                <DuolingoLink onVerified={() => setDuoOk(true)} />
+              </div>
+            )}
+            {!solo && (
               <label className="mt-5 flex items-center gap-3 text-sm">
                 <input type="checkbox" className="h-5 w-5 accent-[var(--flame)]" checked={playing} onChange={(e) => setPlaying(e.target.checked)} />
                 I&apos;m playing too (stake {stake} SOL now)
               </label>
             )}
-            {!solo && p.proofType === "duolingo" && <p className="mt-5 text-xs text-muted">Duolingo challenges: you&apos;ll join from the challenge page after linking your Duolingo account.</p>}
 
             <div className="mt-6 rounded-2xl border border-line bg-surface-2/60 p-4">
               <div className="mb-2 text-sm font-semibold">Timing</div>

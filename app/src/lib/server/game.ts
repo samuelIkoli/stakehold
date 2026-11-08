@@ -422,14 +422,36 @@ export async function recordBaseline(ch: Challenge, p: Participant) {
     day: 0,
     kind: "baseline",
     verdict: "baseline",
-    reason: `Baseline: ${snap.totalXp} XP, streak ${snap.streak}`,
+    reason: `Starting point: ${snap.totalXp} XP`,
     reasonCode: 14,
     proofHash: sha256(JSON.stringify({ u: p.duolingoUsername, xp: snap.totalXp, streak: snap.streak, t: snap.takenAt })),
     metricA: snap.totalXp,
     metricB: snap.streak,
   });
-  await logEvent(ch.id, "baseline", `${displayName(p)} baseline recorded: ${snap.totalXp} XP, streak ${snap.streak}`, { participantId: p.id, tx: proof.tx ?? undefined });
+  await logEvent(ch.id, "baseline", `${displayName(p)} starting point recorded: ${snap.totalXp} XP`, { participantId: p.id, tx: proof.tx ?? undefined });
   return snap;
+}
+
+/**
+ * After a wallet verifies its Duolingo account: attach it to every active Duolingo
+ * challenge that wallet joined without one, and take the starting point right away if
+ * the challenge has already begun (otherwise the scheduler takes it at the start).
+ */
+export async function attachDuolingo(wallet: string, username: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const parts = await db.participant.findMany({
+    where: { wallet, status: "active", duolingoUsername: null, challenge: { proofType: "duolingo", status: "active" } },
+    include: { challenge: true },
+  });
+  for (const part of parts) {
+    const p = await db.participant.update({ where: { id: part.id }, data: { duolingoUsername: username } });
+    const ch = part.challenge;
+    const day = dayAt(clockOf(ch, p), now);
+    if (day >= 1 && day <= ch.numDays) {
+      const hasBase = await db.duoSnapshot.count({ where: { participantId: p.id, boundary: 0, source: "scheduled" } });
+      if (!hasBase) await recordBaseline(ch, p).catch((e) => console.warn("[duolingo] baseline on link failed:", String(e)));
+    }
+  }
 }
 
 /** "I'm done for today" (manual) or the scheduled end-of-day check. */
@@ -439,10 +461,22 @@ export async function checkDuolingo(ch: Challenge, p: Participant, opts: { day?:
   if (p.status !== "active") throw new HttpError(400, "You're no longer active");
   if (day < 1 || day > ch.numDays) throw new HttpError(400, "The challenge isn't running for you right now");
   if (passedDay(p, day)) return { pass: true, already: true, message: "Already passed today ✅", day };
-  const { snap: base, missed } = await baseFor(ch, p, day);
-  if (!base) throw new HttpError(409, "Baseline not recorded yet — it's taken automatically at the start");
+  if (!p.duolingoUsername) throw new HttpError(400, "Link your Duolingo account first");
+  const { snap: base } = await baseFor(ch, p, day);
+  if (!base) {
+    // No baseline yet (e.g. linked late): take it now. XP from before this moment doesn't count.
+    const b = await recordBaseline(ch, p);
+    return {
+      pass: false,
+      day,
+      recorded: false,
+      baselineJustTaken: true,
+      xpGained: 0,
+      message: `Starting point recorded just now: ${b.totalXp} XP. Earn ${ch.minXp ?? 30} XP from here, then tap again.`,
+    };
+  }
   const snap = await takeSnapshot(p, opts.source === "scheduled" ? day : day - 1, opts.source);
-  const r = evaluateDuolingo(base, snap, ch.minXp ?? 30, missed);
+  const r = evaluateDuolingo(base, snap, ch.minXp ?? 30);
   if (!r.pass) return { ...r, day, recorded: false, unchanged: snap.totalXp === base.totalXp };
   const proof = await recordVerdict({
     ch,
@@ -450,12 +484,12 @@ export async function checkDuolingo(ch: Challenge, p: Participant, opts: { day?:
     day,
     kind: "duolingo",
     verdict: "pass",
-    reason: r.message + (r.benefitOfDoubt ? " (a scheduled snapshot was missed, so this day got the benefit of the doubt)" : ""),
+    reason: `${r.message} (${base.totalXp} → ${snap.totalXp} XP)`,
     reasonCode: r.reasonCode,
     proofHash: sha256(JSON.stringify({ u: p.duolingoUsername, base: [base.totalXp, base.streak], now: [snap.totalXp, snap.streak], t: snap.takenAt })),
     metricA: snap.totalXp,
     metricB: snap.streak,
-    checks: { xpGained: r.xpGained, streakBefore: r.streakBefore, streakNow: r.streakNow, minXp: ch.minXp ?? 30, benefitOfDoubt: r.benefitOfDoubt },
+    checks: { xpGained: r.xpGained, xpBefore: base.totalXp, xpNow: snap.totalXp, minXp: ch.minXp ?? 30 },
   });
   return { ...r, day, recorded: true, tx: proof.tx };
 }

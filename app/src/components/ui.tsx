@@ -81,7 +81,7 @@ export function StrengthBadge({ strength }: { strength: string }) {
 export const PROOF_LABEL: Record<string, string> = {
   photo: "Photo + pose",
   gym: "Gym check-in/out",
-  duolingo: "Duolingo XP + streak",
+  duolingo: "Duolingo XP",
   honor: "Honor system",
 };
 export const PROOF_EMOJI: Record<string, string> = { photo: "📸", gym: "🏋️", duolingo: "🦉", honor: "🤝" };

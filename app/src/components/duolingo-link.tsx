@@ -43,7 +43,7 @@ export function DuolingoLink({ onVerified }: { onVerified?: (username: string) =
       if (!wallet) await signIn();
       const j = await call("POST", { username });
       setLink(j.link);
-      setMsg({ tone: "neutral", text: `Found ${j.link.username}: ${j.profile.totalXp.toLocaleString()} XP, ${j.profile.streak}-day streak.` });
+      setMsg({ tone: "neutral", text: `Found ${j.link.username}: ${j.profile.totalXp.toLocaleString()} XP.` });
     } catch (e) {
       setMsg({ tone: "out", text: e instanceof Error ? e.message : String(e) });
     } finally {

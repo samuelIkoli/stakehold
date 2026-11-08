@@ -7,11 +7,11 @@ Everyone has a graveyard of abandoned habits: the gym membership, the language a
 
 ## What it does
 - **Group, public or solo challenges.** Players stake SOL on a habit for 3–30 days.
-- **Daily proof, three layers deep.** ① Code checks the hard facts (time windows, GPS geofence, check-in/check-out gap, Duolingo XP + streak numbers). ② An AI referee (Gemini vision) judges each photo: the right random pose, a live photo, the rule followed, no prompt-injection tricks. ③ Human appeals (roadmap).
+- **Daily proof, three layers deep.** ① Code checks the hard facts (time windows, GPS geofence, check-in/check-out gap, Duolingo XP numbers). ② An AI referee (Gemini vision) judges each photo: the right random pose, a live photo, the rule followed, no prompt-injection tricks. ③ Human appeals (roadmap).
 - **Surprise windows with onchain randomness.** When a 10-minute window opens, the Solana program reads the **SlotHashes sysvar** and derives a pose ("show 3 fingers + point left + smile"). Nobody can know it in advance, and anyone can recompute it in our Verify panel.
 - **Survivor mechanics.** Miss a day and you're eliminated, live on the leaderboard, with the day and the reason. Survivors split the whole pot equally, quitters' stakes included.
 - **Solo commitments.** Bet on yourself. Finish → stake back plus a bonus from the community pool. Fail → your stake goes to a (clearly labelled demo) charity or the community pool.
-- **Proof types:** photo + pose (any habit), gym check-in/check-out with GPS and a new pose, Duolingo (ownership via a bio code; XP gained ≥ minimum **and** streak +1 each day), and an honest "honor system" tier.
+- **Proof types:** photo + pose (any habit), gym check-in/check-out with GPS and a new pose, Duolingo (ownership via a bio code; XP earned ≥ the minimum each day or round, counted from a recorded starting point), and an honest "honor system" tier.
 - **AI proof-plan helper:** describe a habit in plain English and get a proof plan with a strength rating. For "no sugar" it honestly says it can't be photographed and suggests a positive reframe.
 - **Coming soon:** *Stake* (skill games with onchain pots) and *Sponsor* (brands fund pots for everyone who completes a challenge).
 
@@ -25,7 +25,7 @@ Everyone has a graveyard of abandoned habits: the gym membership, the language a
 - **Time zones.** "Starts at *your* midnight" means members of one challenge start at different instants. We store a per-member start onchain (`reference − UTC offset`) and made the offchain logic use exactly the same boundaries, with unit tests including DST.
 - **Randomness without an oracle.** SlotHashes is too large to deserialise onchain, so we parse the newest entry by hand. A gym check-out must also never repeat the check-in pose, so a deterministic fallback reads different hash bytes.
 - **Making the AI safe to trust with money.** We never let the model's own "pass" decide. The final verdict is computed in code from individual checks, and text in images is treated as data (prompt-injection guard).
-- **Duolingo's unofficial API.** We found the endpoint that still works, discovered that a `fields=` parameter silently breaks it, and designed a rule (XP gained AND streak +1) that defeats streak freezes and tiny "streak-only" lessons.
+- **Duolingo's unofficial API.** We found the endpoint that still works, discovered that a `fields=` parameter silently breaks it, and settled on an XP-only rule measured from a recorded starting point. A streak rule failed real users who had already kept their streak that day.
 
 ## Accomplishments that we're proud of
 - An end-to-end loop on devnet: create → join → daily proof → elimination → settle → claim, every step with an Explorer link.

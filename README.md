@@ -17,7 +17,7 @@ Most people who start a habit quit within weeks. Willpower alone doesn't hold, a
 ## The solution
 
 - **Stakes in a program-owned vault.** Nobody, not even us, can run off with the pot.
-- **Layered judging.** ① Code checks hard facts (window timing, GPS geofence, time gap, Duolingo XP and streak numbers). ② An AI referee judges every photo (correct pose, live photo, rule followed, no prompt injection). ③ People resolve appeals *(roadmap)*.
+- **Layered judging.** ① Code checks hard facts (window timing, GPS geofence, time gap, Duolingo XP numbers). ② An AI referee judges every photo (correct pose, live photo, rule followed, no prompt injection). ③ People resolve appeals *(roadmap)*.
 - **Unpredictable poses.** When a proof window opens, the program reads the **SlotHashes sysvar** and derives the pose (fingers × direction × extra = 80 combinations). A pre-taken photo can't match it.
 - **A survivor game.** Eliminations show up live. Survivors split the pot equally, using a pull pattern (`claim`).
 - **Solo mode + community pool.** Bet on yourself and pick a charity or the community pool as the destination if you fail. Finishers get a capped bonus from the pool.
@@ -28,7 +28,7 @@ Most people who start a habit quit within weeks. Willpower alone doesn't hold, a
 |---|---|
 | **Escrow** | `join_challenge` moves the exact stake into a program-owned `Vault` PDA. Only `settle`/`claim` move it out, and both depend only on recorded state. |
 | **Randomness + timestamps** | `open_window` reads the newest entry of the `SlotHashes` sysvar and stores the slot, the hash, `opened_at` and the derived pose in a `Window` PDA. The browser's Verify panel recomputes the pose from the hash. Day boundaries and windows use the onchain `Clock`. |
-| **Permanent check-in records** | Every verdict (pass *or* fail) becomes a `CheckIn` PDA holding a SHA-256 **proof hash**, the verdict, a reason code, metrics (e.g. Duolingo XP/streak), the slot and a timestamp. Photos are never stored onchain. |
+| **Permanent check-in records** | Every verdict (pass *or* fail) becomes a `CheckIn` PDA holding a SHA-256 **proof hash**, the verdict, a reason code, metrics (e.g. Duolingo XP), the slot and a timestamp. Photos are never stored onchain. |
 | **AI referee with limited powers** | The judge keypair can sign **only** `open_window` and `record_checkin`. It cannot touch the vault or the pool; it just pays rent for the records it writes. The judge is set globally by the admin and copied into each challenge, so creators can't appoint themselves. |
 | **Automatic payouts** | Anyone can call `eliminate_missed` after a missed day and `settle` after the end. Survivors `claim` their equal share, and double claims are impossible. If nobody survives, the pot goes to the community pool (or to the chosen charity for solo). |
 | **Rules commitment** | The challenge's proof plan is hashed (`config_hash`) at creation, so the rules can't be changed afterwards. The UI verifies the hash. |
@@ -86,7 +86,7 @@ flowchart LR
 |---|---|---|
 | 📸 **Photo + pose** | good | A surprise window opens at a random time within the creator's allowed hours and lasts 10 min (configurable). The in-app camera is the only input (no gallery). The AI checks the pose, that the photo is live and that the rule is followed. One retake per window. |
 | 🏋️ **Gym** | good | "I'm at the gym" opens a check-in window → photo + GPS (≤ 100 m). At least 45 min later, check-out opens a **new** pose → photo + GPS. Code checks the distance and the time gap; the AI checks both photos. One onchain verdict per day, whose proof hash commits to both photos and the GPS readings. |
-| 🦉 **Duolingo** | strong | Ownership: paste a one-time `STAKE-XXXX` code into your public bio. A baseline (XP + streak) is recorded onchain at your start. Daily rule: **XP gained ≥ minimum AND streak = previous + 1** (this defeats streak freezes, streak-only lessons and resets). "I'm done for today" checks immediately (with an automatic retry after 60 s); a scheduled snapshot runs at each midnight. If a snapshot is ever missed, that day gets the benefit of the doubt. Screenshots can pre-fill your username but never count as proof. |
+| 🦉 **Duolingo** | strong | Ownership: paste a one-time `STAKE-XXXX` code into your public bio. Your starting XP is recorded onchain when the day or round starts (or the moment you link, if you link late). Rule: **XP earned ≥ the minimum** each day or round. Streaks are deliberately ignored: you may already have kept today's streak before joining, and a streak doesn't measure effort. "I'm done" checks immediately (with an automatic retry after 60 s), and a scheduled check runs when each day or round ends. Screenshots can pre-fill your username but never count as proof. |
 | 🤝 **Honor** | honor system | Daily self-report, recorded onchain. The AI proposes this honestly for "not doing something" habits and suggests a provable reframe. |
 
 The **AI proof-plan helper** on Create turns a plain-English habit into a proof type, an exact rule, window hours and minimums, plus a strength rating (`strong` / `good` / `honor system`).
@@ -131,7 +131,7 @@ anchor deploy --provider.cluster devnet
 4. Day 2: try a **pre-taken photo or the wrong pose** → ❌ rejected with a clear reason. Use the one retake → ✅. Mei 🤖 gets the pose wrong twice.
 5. When day 2 ends, Mei is **eliminated on the leaderboard**, with the day and reason.
 6. The challenge ends → **settle** (automatic, or press 🏆) → survivors split the pot → **claim** with Explorer links.
-7. Duolingo: **Seed 1-day Duolingo demo** → link your account → join → baseline recorded at start → do a lesson → **I'm done for today** → "+45 XP, streak 652 ✅".
+7. Duolingo: **Seed 1-day Duolingo demo** → link your account → join → baseline recorded at start → do a lesson → **I'm done — check my XP** → "+45 XP ✅ you're safe".
 
 The **Verify panel** on each challenge shows each window's slot and slot hash and how the pose was derived from its bytes.
 
