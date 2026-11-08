@@ -20,5 +20,5 @@ _Updated after each milestone. Times in WAT (Sat 7 Nov 2026)._
 
 ## Blockers (need you)
 - Deploy wallet `9yBFyRrxJFrmvi22nsJc9h6Ux4ob8fmLNepbpxWVDBkf`: **0 SOL**. CLI airdrops are rate-limited; please use https://faucet.solana.com (≈5 SOL).
-- `.env.local`: `GEMINI_API_KEY`, `PHANTOM_ADDRESS` and `DUOLINGO_TEST_USERNAME` are still placeholders.
+- `.env.local`: `GEMINI_API_KEY` is still a placeholder. (Duolingo usernames are linked per player in the app, not set in env.)
 - Note: your network to npm is very slow (~35 KB/s), so dependency installs take ~30 min. Already done, no action needed.
