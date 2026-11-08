@@ -109,7 +109,8 @@ export async function openWindowFor(ch: Challenge, p: Participant, day: number, 
         error: null,
       },
     });
-    const what = index === 0 ? (ch.proofType === "gym" ? "Check-in window" : "Proof window") : "Check-out window";
+    const what =
+      ch.proofType === "gym" ? (index === 0 ? "Check-in window" : "Check-out window") : perDayOf(ch) > 1 ? "Photo window" : "Proof window";
     await logEvent(ch.id, "window", `${what} opened for ${displayName(p)} · day ${day} · ${describePose(poseFromArray(w.pose))}`, {
       participantId: p.id,
       tx: w.sig,
@@ -236,6 +237,21 @@ export type PhotoSubmission = {
 
 const MAX_PHOTO_SUBMISSIONS_PER_WINDOW = 2; // the photo + one retake
 
+/** Photos needed per day (photo challenges); > 1 means players open each window themselves. */
+export function perDayOf(ch: Challenge): number {
+  if (ch.proofType !== "photo") return 1;
+  try {
+    return Math.min(5, Math.max(1, Number((JSON.parse(ch.plan) as { perDay?: number }).perDay) || 1));
+  } catch {
+    return 1;
+  }
+}
+
+/** Passing photos already taken today (multi-photo days keep all but the last offchain). */
+export function photoPassesToday(p: Participant, day: number) {
+  return db.proof.findMany({ where: { participantId: p.id, day, kind: "photo", verdict: "pass" }, orderBy: { createdAt: "asc" } });
+}
+
 export async function submitPhoto(s: PhotoSubmission) {
   const { ch, p } = s;
   const now = Math.floor(Date.now() / 1000);
@@ -243,11 +259,15 @@ export async function submitPhoto(s: PhotoSubmission) {
   const day = dayAt(clockOf(ch, p), now);
   if (day < 1 || day > ch.numDays) throw new HttpError(400, "The challenge isn't running for you right now");
   if (passedDay(p, day)) throw new HttpError(400, "You've already passed today 🎉");
-  const index = s.kind === "gym_out" ? 1 : 0;
+  const perDay = perDayOf(ch);
+  const earlier = s.kind === "photo" && perDay > 1 ? await photoPassesToday(p, day) : [];
+  const latest = perDay > 1 ? await db.proofWindow.findFirst({ where: { participantId: p.id, day }, orderBy: { index: "desc" } }) : null;
+  const index = s.kind === "gym_out" ? 1 : perDay > 1 ? (latest?.index ?? 0) : 0;
   const win = await db.proofWindow.findUnique({ where: { participantId_day_index: { participantId: p.id, day, index } } });
   if (!win || win.status !== "open" || !win.pose) throw new HttpError(400, "No proof window is open for you right now");
   if (now > (win.expiresAt ?? 0) + 30) throw new HttpError(400, "This proof window has closed");
-  const used = await db.proof.count({ where: { participantId: p.id, day, kind: s.kind } });
+  if (perDay > 1 && earlier.some((e) => e.windowIndex === index)) throw new HttpError(400, "That photo is done — open a new window for the next one");
+  const used = await db.proof.count({ where: { participantId: p.id, day, kind: s.kind, windowIndex: index } });
   if (used >= MAX_PHOTO_SUBMISSIONS_PER_WINDOW) throw new HttpError(400, "You've used your photo and your one retake for this window");
 
   const pose = poseFromArray(JSON.parse(win.pose));
@@ -290,6 +310,7 @@ export async function submitPhoto(s: PhotoSubmission) {
       habit: ch.habit,
       rule: rules.rule,
       kind: s.kind,
+      part: perDay > 1 ? { n: earlier.length + 1, of: perDay } : undefined,
     });
   }
   const pass = !codeFail && ai?.verdict === "pass";
@@ -298,14 +319,17 @@ export async function submitPhoto(s: PhotoSubmission) {
   const checks = { ...codeChecks, ...(ai?.checks ?? {}), model: ai?.model };
 
   // Proof hash commits to the photo, the pose window and (gym) the check-in photo + GPS.
+  // Multi-photo days: the last photo's hash also commits to the day's earlier photos.
   const proofHash =
     s.kind === "gym_out" && gymIn
       ? sha256(Buffer.concat([Buffer.from(gymIn.proofHash, "hex"), imageHash, Buffer.from(JSON.stringify({ lat: s.lat, lng: s.lng, w: win.pda }))]))
-      : sha256(Buffer.concat([imageHash, Buffer.from(win.pda ?? "")]));
+      : sha256(Buffer.concat([...earlier.map((e) => Buffer.from(e.proofHash, "hex")), imageHash, Buffer.from(win.pda ?? "")]));
 
-  // Gym check-in passes are kept offchain; the day's onchain verdict is the check-out,
-  // whose proof hash commits to both photos. Every rejection is recorded onchain.
-  const onchain = s.kind !== "gym_in" || !pass;
+  // Gym check-in passes and all but the last photo of a multi-photo day are kept
+  // offchain; the day's onchain verdict commits to every photo. Every rejection is
+  // recorded onchain.
+  const partial = pass && (s.kind === "gym_in" || (s.kind === "photo" && earlier.length < perDay - 1));
+  const onchain = !partial;
   const minutes = gymIn ? Math.floor((now - Math.floor(gymIn.createdAt.getTime() / 1000)) / 60) : undefined;
   const proof = await recordVerdict({
     ch,
@@ -328,6 +352,9 @@ export async function submitPhoto(s: PhotoSubmission) {
   if (s.kind === "gym_in" && pass) {
     await logEvent(ch.id, "checkin", `${displayName(p)} checked in at ${ch.gymLabel || "the gym"} · day ${day}`, { participantId: p.id });
   }
+  if (s.kind === "photo" && partial) {
+    await logEvent(ch.id, "checkin", `${displayName(p)} · day ${day} · 📸 photo ${earlier.length + 1} of ${perDay} accepted`, { participantId: p.id });
+  }
   return {
     verdict: pass ? "pass" : "fail",
     reason,
@@ -338,6 +365,7 @@ export async function submitPhoto(s: PhotoSubmission) {
     proofHash: proof.proofHash,
     retakesLeft: Math.max(0, MAX_PHOTO_SUBMISSIONS_PER_WINDOW - used - 1),
     day,
+    part: perDay > 1 ? { n: earlier.length + 1, of: perDay, dayDone: pass && !partial } : undefined,
   };
 }
 
@@ -520,7 +548,7 @@ export async function tickChallenge(ch: ChallengeWithPlayers, now: number) {
         }
       }
       // Surprise windows for photo challenges.
-      if (ch.proofType === "photo" && day >= 1 && day <= ch.numDays && !passedDay(p, day)) {
+      if (ch.proofType === "photo" && perDayOf(ch) === 1 && day >= 1 && day <= ch.numDays && !passedDay(p, day)) {
         let w = await db.proofWindow.findUnique({ where: { participantId_day_index: { participantId: p.id, day, index: 0 } } });
         if (!w) {
           const at = pickWindowTime(c, day, {

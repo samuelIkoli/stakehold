@@ -45,6 +45,7 @@ const Rules = z.object({
   windowMinutes: z.number().int().min(1).max(60),
   minXp: z.number().int().optional(),
   minGapSecs: z.number().int().optional(),
+  perDay: z.number().int().min(2).max(5).optional(),
   gym: z.object({ lat: z.number(), lng: z.number(), radiusM: z.number(), label: z.string().optional() }).optional(),
 });
 

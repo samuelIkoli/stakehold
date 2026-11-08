@@ -556,9 +556,14 @@ function RulesCard({ d }: { d: ChallengeData }) {
       <p className="mt-2 text-[15px] font-medium">{c.plan.rule}</p>
       <ul className="mt-3 space-y-1.5 text-sm text-muted">
         <li>
-          📅 {c.numDays} day{c.numDays > 1 ? "s" : ""} · day = {c.demo ? `${c.dayLen / 60} min (demo)` : "24 h, from your local midnight"}
+          📅 {c.demo ? `${c.numDays} round${c.numDays > 1 ? "s" : ""} of ${c.dayLen < 3600 ? `${Math.round(c.dayLen / 60)} min` : `${+(c.dayLen / 3600).toFixed(2)} h`} · everyone starts together` : `${c.numDays} day${c.numDays > 1 ? "s" : ""} · 24 h each, from your local midnight`}
         </li>
-        {c.proofType === "photo" && (
+        {c.proofType === "photo" && Number(c.plan.perDay) > 1 && (
+          <li>
+            📸 {String(c.plan.perDay)} photos a {c.demo ? "round" : "day"}, each with its own random pose · ≥ {Math.round((c.minGapSecs ?? 3600) / 60)} min apart · you open each window when you&apos;re doing it
+          </li>
+        )}
+        {c.proofType === "photo" && !(Number(c.plan.perDay) > 1) && (
           <li>
             🎲 Surprise {Math.round(c.windowSecs / 60) || 1}-min window {c.demo ? "early each demo day" : `between ${c.plan.windowStartHour}:00–${c.plan.windowEndHour}:00`} · 1 retake
           </li>

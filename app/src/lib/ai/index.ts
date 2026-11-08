@@ -1,5 +1,5 @@
 // The one place the app talks to an AI model. Swap `provider` to change vendors.
-import { gemini } from "./gemini";
+import { gemini, lastModel } from "./gemini";
 import type { AiProvider, JudgeResult, Media, PhotoChecks, ProofPlan, ProofType } from "./types";
 
 export * from "./types";
@@ -43,6 +43,8 @@ export type PhotoJudgeInput = {
   habit: string;
   rule: string;
   kind: "photo" | "gym_in" | "gym_out";
+  /** For multi-photo days: which photo this is. Judge only this one photo. */
+  part?: { n: number; of: number };
 };
 
 export async function judgePhoto(input: PhotoJudgeInput): Promise<JudgeResult> {
@@ -63,7 +65,9 @@ Be fair but strict: money depends on your verdict. Judge only what you can see. 
       ? "This is the GYM CHECK-IN photo: the person should be in a gym or workout space."
       : input.kind === "gym_out"
         ? "This is the GYM CHECK-OUT photo, taken after the workout, in a gym or workout space."
-        : "This is the daily proof photo.";
+        : input.part
+          ? `This is photo ${input.part.n} of ${input.part.of} for today. Each photo is judged on its own: judge only whether THIS photo shows the rule once.`
+          : "This is the daily proof photo.";
   const prompt = `Habit: ${input.habit}
 Challenge rule the photo must show: ${input.rule}
 ${kindText}
@@ -107,7 +111,7 @@ Evaluate:
           : !checks.location_plausible
             ? 4
             : 2;
-  return { verdict: pass ? "pass" : "fail", reason: raw.reason, checks, reasonCode, model };
+  return { verdict: pass ? "pass" : "fail", reason: raw.reason, checks, reasonCode, model: lastModel ?? model };
 }
 
 // ---------- proof plan ----------
@@ -125,6 +129,9 @@ const PLAN_SCHEMA = {
     windowMinutes: { type: "INTEGER" },
     minXp: { type: "INTEGER", nullable: true },
     minGapMinutes: { type: "INTEGER", nullable: true },
+    perDay: { type: "INTEGER", nullable: true, description: "How many separate photo proofs per day (1-5)." },
+    numDays: { type: "INTEGER", nullable: true, description: "Number of days if the creator stated or implied it, else null." },
+    roundMinutes: { type: "INTEGER", nullable: true, description: "For short time-boxed challenges only: minutes the player has, else null." },
     reframe: { type: "STRING", nullable: true, description: "If the habit is about NOT doing something, an honest positive reframe that can be proven." },
     tips: { type: "ARRAY", items: { type: "STRING" } },
   },
@@ -142,8 +149,15 @@ Available proof types:
 Rules:
 - Be honest about strength. Habits about NOT doing something ("no sugar", "no smoking", "no social media") cannot be proven by a photo: say so in strengthReason, set reframe to a positive provable habit (e.g. "no sugar" -> "photo of every meal"), and choose proofType "photo" for the reframe if the user would accept it, else "honor".
 - windowStartHour/windowEndHour are local hours (0-23) when the surprise window may open; pick sensible hours for the habit. windowMinutes is 10 unless there's a reason.
-- minXp only for duolingo (default 30). minGapMinutes only for gym (default 45).
+- RESPECT THE CREATOR'S NUMBERS. If they say an amount, count or time frame, use it exactly instead of a default:
+  - "50 XP" -> minXp 50 (default 30 only when no number is given).
+  - "twice a day" / "2 meals" / "3 times" -> perDay 2 / 2 / 3 (photo only, max 5). Default perDay 1.
+  - "today" / "just today" -> numDays 1. "for 2 weeks" -> numDays 14. "every weekday for a month" -> numDays 30. Else numDays null.
+  - "in the next hour" / "within 30 minutes" / "by tonight" -> roundMinutes 60 / 30 / null (only for deadlines under 24 h measured from now). Else null.
+- minGapMinutes: for gym, minutes between check-in and check-out (default 45). For photo with perDay > 1, the minimum minutes between two photos (e.g. meals: 120; scale down for short roundMinutes). Else null.
+- rule describes what ONE photo must show (never "twice" or "two photos" — perDay handles the count). Example: habit "eat yam twice today" -> rule "The person is eating a plate of yam (yam visible on the plate or fork).", perDay 2.
 - rule must be concrete and checkable from one photo or the data.
+- title should reflect the creator's numbers (e.g. "+50 XP in an hour", "Yam twice today").
 - tips: 2-3 short tips for players.`;
   const plan = await provider.generateJson<ProofPlan>({
     system,
@@ -162,6 +176,7 @@ export function normalizePlan(p: Partial<ProofPlan>): ProofPlan {
   const clampHour = (h: unknown, d: number) => (Number.isFinite(h) ? Math.min(23, Math.max(0, Math.round(h as number))) : d);
   const start = clampHour(p.windowStartHour, 7);
   const end = Math.max(start + 1, clampHour(p.windowEndHour, 21));
+  const perDay = Math.min(5, Math.max(1, Math.round(Number(p.perDay) || 1)));
   return {
     title: (p.title || "Daily habit challenge").slice(0, 60),
     proofType: type,
@@ -172,7 +187,11 @@ export function normalizePlan(p: Partial<ProofPlan>): ProofPlan {
     windowEndHour: Math.min(24, end),
     windowMinutes: Math.min(60, Math.max(2, Math.round(p.windowMinutes ?? 10))),
     minXp: type === "duolingo" ? Math.max(1, Math.round(p.minXp ?? 30)) : undefined,
-    minGapMinutes: type === "gym" ? Math.max(1, Math.round(p.minGapMinutes ?? 45)) : undefined,
+    minGapMinutes:
+      type === "gym" ? Math.max(1, Math.round(p.minGapMinutes ?? 45)) : type === "photo" && perDay > 1 ? Math.max(1, Math.round(p.minGapMinutes ?? 60)) : undefined,
+    perDay: type === "photo" ? perDay : 1,
+    numDays: Number.isFinite(p.numDays) && (p.numDays as number) > 0 ? Math.min(60, Math.round(p.numDays as number)) : null,
+    roundMinutes: Number.isFinite(p.roundMinutes) && (p.roundMinutes as number) > 0 ? Math.min(1440, Math.max(2, Math.round(p.roundMinutes as number))) : null,
     reframe: p.reframe || null,
     tips: (p.tips ?? []).slice(0, 3),
   };

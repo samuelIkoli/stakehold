@@ -75,10 +75,33 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
       if (!r.ok) throw new Error(j.error);
       setPlan(j.plan);
       setPlanSource(j.source);
+      applyPlanFormat(j.plan, text);
     } catch (e) {
       setError(friendlyError(e));
     } finally {
       setPlanning(false);
+    }
+  }
+
+  /** The plan's own numbers ("today", "in the next hour") set the duration and timing. */
+  function applyPlanFormat(pl: ProofPlan, text: string) {
+    if (pl.roundMinutes) {
+      setDemo(true);
+      setDemoDayLen(Math.max(60, pl.roundMinutes * 60));
+      setDemoLead(120);
+      setDays(pl.numDays ?? 1);
+    } else if (pl.numDays === 1 && /\b(today|tonight)\b/i.test(text)) {
+      // "…today": one round from a couple of minutes from now until local midnight.
+      const now = new Date();
+      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() / 1000;
+      const left = Math.floor((midnight - now.getTime() / 1000 - 120) / 900) * 900;
+      setDemo(true);
+      setDemoDayLen(Math.max(1800, left));
+      setDemoLead(120);
+      setDays(1);
+    } else {
+      setDemo(false);
+      setDays(pl.numDays ?? 7);
     }
   }
 
@@ -132,8 +155,10 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
     try {
       await signIn();
       const windowSecs = demo ? Math.round(Math.min(p.windowMinutes * 60, demoDayLen * 0.65)) : p.windowMinutes * 60;
-      const minGapSecs =
-        p.proofType === "gym" ? (demo ? Math.max(20, Math.round(((p.minGapMinutes ?? 45) * 60 * demoDayLen) / 86400)) : (p.minGapMinutes ?? 45) * 60) : undefined;
+      const perDay = p.proofType === "photo" ? Math.min(5, Math.max(1, p.perDay ?? 1)) : 1;
+      const gapMin = p.proofType === "gym" ? (p.minGapMinutes ?? 45) : perDay > 1 ? (p.minGapMinutes ?? 60) : 0;
+      // Quick rounds: keep the gap but make sure it fits inside one round.
+      const minGapSecs = gapMin ? (demo ? Math.max(20, Math.min(gapMin * 60, Math.floor(demoDayLen / (perDay + 1)))) : gapMin * 60) : undefined;
       const rules: ChallengeRules = {
         v: 1,
         title: p.title.trim(),
@@ -146,6 +171,7 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
         windowMinutes: p.windowMinutes,
         ...(p.proofType === "duolingo" ? { minXp: p.minXp ?? 30 } : {}),
         ...(minGapSecs ? { minGapSecs } : {}),
+        ...(perDay > 1 ? { perDay } : {}),
         ...(p.proofType === "gym" ? { gym: { lat: Number(gym.lat), lng: Number(gym.lng), radiusM: gym.radiusM, label: gym.label || undefined } } : {}),
       };
       const hash = await sha256Hex(canonicalJson(rules));
@@ -265,6 +291,20 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               {p.proofType === "photo" && (
                 <>
+                  <Field label="Photos per day" hint={(p.perDay ?? 1) > 1 ? "Each photo gets its own random pose. Players open each window when they're doing it." : "One surprise window a day."}>
+                    <select className={inputCls} value={p.perDay ?? 1} onChange={(e) => set("perDay", Number(e.target.value))}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "photo" : "photos"}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  {(p.perDay ?? 1) > 1 && (
+                    <Field label="Min. minutes between photos">
+                      <input type="number" min={1} className={inputCls} value={p.minGapMinutes ?? 60} onChange={(e) => set("minGapMinutes", Number(e.target.value))} />
+                    </Field>
+                  )}
                   <Field label="Window opens after" hint="Local time, each player's own zone">
                     <select className={inputCls} value={p.windowStartHour} onChange={(e) => set("windowStartHour", Number(e.target.value))}>
                       {Array.from({ length: 24 }, (_, h) => (
@@ -387,16 +427,41 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
                       {v} ◎
                     </button>
                   ))}
-                  <input type="number" step="0.01" min={0.001} max={10} className={cx(inputCls, "w-24 py-2")} value={stake} onChange={(e) => setStake(Number(e.target.value))} />
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    or
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0.001}
+                      max={10}
+                      aria-label="Custom stake in SOL"
+                      className={cx(inputCls, "w-28 py-2", ![0.05, 0.1, 0.25, 0.5].includes(stake) && "border-flame")}
+                      value={stake}
+                      onChange={(e) => setStake(Math.min(10, Math.max(0, Number(e.target.value))))}
+                    />
+                    ◎
+                  </label>
                 </div>
               </Field>
-              <Field label="Duration">
+              <Field label={demo ? "Number of rounds" : "Duration (days)"}>
                 <div className="flex flex-wrap gap-2">
-                  {(demo ? [1, 2, 3, 5] : [3, 7, 14, 30]).map((v) => (
+                  {(demo ? [1, 2, 3, 5] : [1, 3, 7, 14, 30]).map((v) => (
                     <button key={v} onClick={() => setDays(v)} className={chip(days === v)}>
-                      {v} {v === 1 ? "day" : "days"}
+                      {v} {demo ? (v === 1 ? "round" : "rounds") : v === 1 ? "day" : "days"}
                     </button>
                   ))}
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    or
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      aria-label="Custom duration"
+                      className={cx(inputCls, "w-20 py-2", !(demo ? [1, 2, 3, 5] : [1, 3, 7, 14, 30]).includes(days) && "border-flame")}
+                      value={days}
+                      onChange={(e) => setDays(Math.min(60, Math.max(1, Math.round(Number(e.target.value) || 1))))}
+                    />
+                  </label>
                 </div>
               </Field>
               {!solo && (
@@ -448,28 +513,40 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
             )}
             {!solo && p.proofType === "duolingo" && <p className="mt-5 text-xs text-muted">Duolingo challenges: you&apos;ll join from the challenge page after linking your Duolingo account.</p>}
 
-            <div className="mt-6 rounded-2xl border border-dashed border-violet/40 bg-violet/5 p-4">
-              <label className="flex items-center gap-3 text-sm font-semibold">
-                <input type="checkbox" className="h-5 w-5 accent-[var(--violet)]" checked={demo} onChange={(e) => {
-                  setDemo(e.target.checked);
-                  setDays(e.target.checked ? 2 : 7);
-                }} />
-                Demo mode — 1 day = {demoDayLen / 60} minutes
-              </label>
+            <div className="mt-6 rounded-2xl border border-line bg-surface-2/60 p-4">
+              <div className="mb-2 text-sm font-semibold">Timing</div>
+              <Segmented
+                value={demo ? "quick" : "daily"}
+                onChange={(v) => {
+                  setDemo(v === "quick");
+                  setDays(v === "quick" ? 1 : 7);
+                }}
+                options={[
+                  { value: "daily", label: "📅 Daily · 24 h days" },
+                  { value: "quick", label: "⚡ Quick rounds" },
+                ]}
+              />
+              <p className="mt-2 text-xs text-muted">
+                {demo
+                  ? "Starts in a few minutes for everyone at once. Each round works like a day: prove it before the round ends or you're out. Great for “in the next hour” goals and live demos."
+                  : "Each day runs from midnight to midnight in every player's own time zone."}
+              </p>
               {demo && (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <Field label="Day length">
+                  <Field label="Each round lasts">
                     <select className={inputCls} value={demoDayLen} onChange={(e) => setDemoDayLen(Number(e.target.value))}>
-                      {[60, 90, 120, 180, 300].map((s) => (
-                        <option key={s} value={s}>
-                          {s / 60} min
-                        </option>
-                      ))}
+                      {[...new Set([60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 28800, 43200, demoDayLen])]
+                        .sort((a, b) => a - b)
+                        .map((s) => (
+                          <option key={s} value={s}>
+                            {fmtLen(s)}
+                          </option>
+                        ))}
                     </select>
                   </Field>
                   <Field label="Starts in about">
                     <select className={inputCls} value={demoLead} onChange={(e) => setDemoLead(Number(e.target.value))}>
-                      {[60, 180, 300, 600].map((s) => (
+                      {[60, 120, 180, 300, 600].map((s) => (
                         <option key={s} value={s}>
                           {s / 60} min
                         </option>
@@ -499,7 +576,8 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
           </div>
           <div className="space-y-3 p-5 text-sm">
             <Row k="Stake" v={`${stake} SOL ${solo ? "" : "per player"}`} />
-            <Row k="Duration" v={`${days} ${demo ? "demo " : ""}day${days > 1 ? "s" : ""}${demo ? ` (${(days * demoDayLen) / 60} min)` : ""}`} />
+            <Row k="Duration" v={demo ? `${days} × ${fmtLen(demoDayLen)} round${days > 1 ? "s" : ""}` : `${days} day${days > 1 ? "s" : ""}`} />
+            {p?.proofType === "photo" && (p.perDay ?? 1) > 1 && <Row k="Photos" v={`${p.perDay} a ${demo ? "round" : "day"}, ≥ ${p.minGapMinutes ?? 60} min apart`} />}
             {!solo && <Row k="Max pot" v={`${(stake * maxPlayers).toFixed(2)} SOL`} />}
             <Row k="Proof" v={p ? { photo: "📸 Photo + pose", gym: "🏋️ Gym", duolingo: "🦉 Duolingo", honor: "🤝 Honor" }[p.proofType] : "—"} />
             <Row
@@ -520,6 +598,14 @@ export function CreateForm({ initialMode = "group" }: { initialMode?: "group" | 
       </div>
     </div>
   );
+}
+
+/** Round length for display: "45 min", "2 h", "9 h 15 min". */
+function fmtLen(s: number) {
+  if (s < 3600) return `${Math.round(s / 60)} min`;
+  const h = Math.floor(s / 3600);
+  const m = Math.round((s % 3600) / 60);
+  return m ? `${h} h ${m} min` : `${h} h`;
 }
 
 function chip(active: boolean) {

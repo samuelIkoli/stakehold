@@ -17,6 +17,7 @@ export type ProofRow = {
   tx: string | null;
   checkinPda: string | null;
   onchain: boolean;
+  windowIndex: number | null;
   createdAt: string;
 };
 

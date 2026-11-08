@@ -47,6 +47,12 @@ export type ProofPlan = {
   windowMinutes: number;
   minXp?: number;
   minGapMinutes?: number;
+  /** Separate proofs needed per day (photo only), e.g. "eat yam twice a day" → 2. */
+  perDay?: number;
+  /** Number of days, when the creator said so ("today" → 1, "for 2 weeks" → 14). */
+  numDays?: number | null;
+  /** Length of each round in minutes for short challenges ("in the next hour" → 60). Null = normal 24 h days. */
+  roundMinutes?: number | null;
   reframe?: string | null;
   tips: string[];
 };

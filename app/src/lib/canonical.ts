@@ -31,5 +31,7 @@ export type ChallengeRules = {
   windowMinutes: number;
   minXp?: number;
   minGapSecs?: number;
+  /** Photos needed per day (only present when > 1). */
+  perDay?: number;
   gym?: { lat: number; lng: number; radiusM: number; label?: string };
 };

@@ -105,6 +105,8 @@ function ProofFlow({ d, me, reload }: { d: ChallengeData; me: ParticipantRow; re
 
 function PhotoProof({ d, me, day, reload }: { d: ChallengeData; me: ParticipantRow; day: number; reload: () => Promise<void> }) {
   const now = useNow();
+  const perDay = Number(d.challenge.plan.perDay) || 1;
+  if (perDay > 1) return <MultiPhotoProof d={d} me={me} day={day} perDay={perDay} reload={reload} />;
   const w = d.windows.find((x) => x.participantId === me.id && x.day === day && x.index === 0);
   const used = me.proofs.filter((p) => p.day === day && p.kind === "photo").length;
   if (!w || !w.pose || (w.expiresAt ?? 0) < now - 30)
@@ -130,6 +132,88 @@ function PhotoProof({ d, me, day, reload }: { d: ChallengeData; me: ParticipantR
       onDone={reload}
       rule={d.challenge.plan.rule}
     />
+  );
+}
+
+/** Several photos a day: the player opens each window when they're doing it, with a gap between photos. */
+function MultiPhotoProof({ d, me, day, perDay, reload }: { d: ChallengeData; me: ParticipantRow; day: number; perDay: number; reload: () => Promise<void> }) {
+  const c = d.challenge;
+  const now = useNow();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const done = me.proofs.filter((p) => p.day === day && p.kind === "photo" && p.verdict === "pass").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const w = d.windows.filter((x) => x.participantId === me.id && x.day === day).sort((a, b) => b.index - a.index)[0];
+  const used = w ? me.proofs.filter((p) => p.day === day && p.kind === "photo" && p.windowIndex === w.index).length : 0;
+  const index = done.length;
+  const last = done[done.length - 1];
+  const readyAt = last ? Math.floor(new Date(last.createdAt).getTime() / 1000) + (c.minGapSecs ?? 3600) : 0;
+  // A window is "spent" once it produced a pass (or both tries were used).
+  const passedHere = !!w && done.some((p) => p.windowIndex === w.index);
+  const live = w && w.pose && !passedHere && (w.expiresAt ?? 0) > now - 20 && used < 2;
+  const expired = w && w.pose && !live && !passedHere;
+
+  async function open() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/window", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challengeId: c.id }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      await reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className={cx("grid gap-2", perDay <= 3 ? "grid-cols-3" : "grid-cols-5")} style={{ gridTemplateColumns: `repeat(${perDay}, minmax(0, 1fr))` }}>
+        {Array.from({ length: perDay }, (_, i) => (
+          <Step key={i} n={i + 1} label={`Photo ${i + 1}`} active={i === done.length} done={i < done.length} />
+        ))}
+      </div>
+      {!live && last && now < readyAt && (
+        <Card className="p-6 text-center">
+          <div className="text-4xl">📸</div>
+          <div className="font-display mt-2 text-xl font-bold">
+            Photo {done.length} of {perDay} accepted
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            Photo {done.length + 1} unlocks in <Countdown to={readyAt} />. You&apos;ll get a <b>new</b> pose.
+          </p>
+        </Card>
+      )}
+      {!live && (!last || now >= readyAt) && (
+        <Card className="p-6 text-center">
+          <div className="text-4xl">{expired ? "⌛" : "📸"}</div>
+          <div className="font-display mt-2 text-xl font-bold">
+            {expired ? `That window closed — open a new one for photo ${index + 1}` : `Ready for photo ${index + 1} of ${perDay}?`}
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            Do it now: tapping below opens a {Math.round(c.windowSecs / 60) || 1}-minute window with a fresh random pose. The photo must show: {c.plan.rule}
+          </p>
+          <Button size="lg" className="mt-4 w-full" onClick={open} loading={busy}>
+            📸 I&apos;m doing it now — open photo {index + 1}
+          </Button>
+          {err && <Alert tone="out" className="mt-3">{err}</Alert>}
+        </Card>
+      )}
+      {live && (
+        <CaptureAndJudge
+          key={`photo-${w!.index}`}
+          title={`Photo ${index + 1} of ${perDay}: strike the pose and snap it live`}
+          pose={poseFromArray(w.pose!)}
+          expiresAt={w.expiresAt!}
+          kind="photo"
+          challengeId={c.id}
+          attemptsLeft={2 - used}
+          onDone={reload}
+          rule={c.plan.rule}
+        />
+      )}
+    </div>
   );
 }
 
