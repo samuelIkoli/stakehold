@@ -54,6 +54,7 @@ async function main() {
     console.log("seeded community pool with 0.1 SOL:", sig);
   }
   console.log("done ✔");
+  process.exit(0); // open RPC sockets would otherwise keep the process alive
 }
 
 main().catch((e) => {

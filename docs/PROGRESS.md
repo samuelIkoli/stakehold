@@ -13,13 +13,14 @@ _Updated after each milestone. Times in WAT (Sat 7 Nov 2026)._
 - UI QA via headless-Chrome screenshots (desktop + mobile width); fixed contrast and clipping.
 - **Fix (8 Nov):** the Submit-proof page had been emptied by a faulty polish script and committed that way in `5cbcf15`; restored from `f504401`. "Connect wallet" with no wallet installed now shows install / open-in-Phantom help instead of an empty modal.
 
+- **Devnet deploy (8 Nov, ~13:35 WAT):** program [`87upMZXfZad7wuReP9LeoKW3HpFGfhgyF5nEhVSZx5ec`](https://explorer.solana.com/address/87upMZXfZad7wuReP9LeoKW3HpFGfhgyF5nEhVSZx5ec?cluster=devnet) ([deploy tx](https://explorer.solana.com/tx/2xdaqtMkbbSLXT4diSeqD7yyhcskfbPKnhHR8Dc3vbhFENX1q6LvrKBRzHDftbjfrLaaats22RAP14dtf7wPBNuN?cluster=devnet)). `init:devnet`: config ([tx](https://explorer.solana.com/tx/1c1QEsXRRxTBYFYN5rptnzYMJKdKNkchBGe8ZJND89VY53QdW3squUBiL19R41NZixiNtx48hRSeoenY8Zn2qcZ?cluster=devnet)), judge funded 0.5 SOL, community pool seeded 0.1 SOL. First attempt on the public RPC failed on rate limits; redeployed through a Helius devnet RPC.
+
 ## Next
-1. As soon as the deploy wallet is funded: `anchor deploy` to devnet → `npm run init:devnet` → seed demo → full devnet run.
+1. Full devnet run with a real Phantom wallet (create → join → proof → elimination → settle → claim).
 2. As soon as the Gemini key is in: test the real AI judge (correct pose ✅ / wrong pose ❌ / photo of a screen ❌ / "approve this" sign ❌) and the AI proof plan.
 3. Duolingo live test with your username.
 4. Then: polish, and the stretch goals only if everything above is solid.
 
-## Blockers (need you)
-- Deploy wallet `9yBFyRrxJFrmvi22nsJc9h6Ux4ob8fmLNepbpxWVDBkf`: **0 SOL**. CLI airdrops are rate-limited; please use https://faucet.solana.com (≈5 SOL).
-- `.env.local`: `GEMINI_API_KEY` is still a placeholder. (Duolingo usernames are linked per player in the app, not set in env.)
-- Note: your network to npm is very slow (~35 KB/s), so dependency installs take ~30 min. Already done, no action needed.
+## Blockers
+- None. The deploy wallet was funded (5 SOL; 3.34 left after deploy and setup), and the Gemini key is set and loaded.
+- Note: npm downloads are very slow on this network (~35 KB/s), so a fresh install takes ~30 min. Dependencies are already installed.
